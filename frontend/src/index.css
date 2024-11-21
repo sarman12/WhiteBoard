@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+html{
+    scroll-behavior: smooth;
+}
+
+.gradient-wallpaper {
+background: linear-gradient(to bottom right, #1a202c, #2d3748, #1a202c) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.gradient-wallpaper::before,
+.gradient-wallpaper::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.2;
+    filter: blur(50px);
+}
+
+.gradient-wallpaper::before {
+    width: 1000px;
+    height: 1000px;
+    background: radial-gradient(circle, rgba(0, 255, 255, 0.9), transparent) !important;
+    /* top: -100px; */
+    /* left: -100px; */
+}
+
+.gradient-wallpaper::after {
+    width: 1000px;
+    height: 1000px;
+    background: radial-gradient(circle, rgba(234, 4, 211, 0.8), transparent) !important;
+    bottom: -200px;
+    right: 0px;
+}

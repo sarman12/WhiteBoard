@@ -1,0 +1,29 @@
+body {
+    cursor: none;
+}
+
+.cursor-dot {
+    width: 16px;
+    height: 15px;
+    background-color: rgba(50, 48, 50, 0.7);
+    position: fixed;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    pointer-events: none;
+    border-radius: 50%;
+    transition: transform 0.1s ease;
+}
+
+.cursor-outline {
+    width: 30px;
+    height: 30px;
+    background-color: rgba(255, 232, 232, 0.6);
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    z-index: 999;
+    pointer-events: none;
+    transition: left 0.1s ease, top 0.1s ease;
+}
