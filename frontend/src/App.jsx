@@ -5,6 +5,7 @@ import Home from './Component/Home/Home';
 import Login from './Component/Login/Login';
 import Register from './Component/Login/Register'; 
 import Dashboard from './Component/Dashboard/Dashboard';
+import Whiteboard from './Component/Whiteboard/Whiteboard';
 function App() {
   useEffect(() => {
     const dot = document.querySelector('.cursor-dot');
@@ -36,6 +37,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/whiteboard" element={<Whiteboard />} />
       </Routes>
     </BrowserRouter>
   );
