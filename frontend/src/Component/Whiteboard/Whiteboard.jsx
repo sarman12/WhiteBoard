@@ -1,128 +1,84 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import React, { useState } from "react";
+import { Tldraw } from "@tldraw/tldraw";
+import 'tldraw/tldraw.css'
+
 import {
-  FaPencilAlt, FaEraser, FaHighlighter, FaFont, FaSearch, FaSearchMinus, FaTrashAlt,
-} from 'react-icons/fa';
+  FaCog,
+  FaQuestion,
+  FaShare,
+} from "react-icons/fa";
+import "../../index.css";
 
-function Whiteboard() {
-  const canvasRef = useRef(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [tool, setTool] = useState('pencil');
-  const [brushSize, setBrushSize] = useState(2);
+const Whiteboard = () => {
   const [messages, setMessages] = useState([]);
-  const [inputValue, setInputValue] = useState('');
-  const [color, setColor] = useState('#000000');
-  const [image, setImage] = useState(null);
-  const [zoomEnabled, setZoomEnabled] = useState(false);
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [whiteboardKey, setWhiteboardKey] = useState(0); 
 
-  useEffect(() => {
-    drawGrid(); // Add a grid overlay when the component mounts
-  }, []);
-
-  const drawGrid = () => {
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const gridSize = 20; // Size of each grid square
-    ctx.strokeStyle = '#e0e0e0'; // Light gray for the grid lines
-    for (let x = 0; x < canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
+  const handleSendMessage = () => {
+    if (currentMessage.trim() === "") return;
+    setMessages((prev) => [...prev, { text: currentMessage, sender: "You" }]);
+    setCurrentMessage("");
   };
 
-  const startDrawing = (e) => {
-    if (zoomEnabled) return;
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.lineWidth = brushSize;
-    ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
-    ctx.beginPath();
-    ctx.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    setIsDrawing(true);
-  };
-
-  const draw = (e) => {
-    if (!isDrawing || zoomEnabled) return;
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const clearCanvas = () => {
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    drawGrid(); // Redraw the grid after clearing
-  };
-
-  const toggleZoom = () => {
-    setZoomEnabled(!zoomEnabled);
-  };
 
   return (
-    <div className="font-sans h-screen flex flex-col">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between p-4 bg-gray-800 text-white">
-        <h2 className="text-lg font-bold">Web Whiteboard</h2>
-        <div className="flex space-x-4 items-center">
-          <span>24h left to save your board</span>
-          <button className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-500">Sign up for Free</button>
+    <div className="w-[100vw] h-[100vh] flex flex-col">
+      <nav className="p-2 px-5 bg-slate-200 w-full flex justify-between">
+        <div>
+          <img
+            src="https://via.placeholder.com/50"
+            alt="Logo"
+            className="w-12 h-12 rounded-full border border-white"
+          />
         </div>
-      </div>
+        <div className="flex items-center space-x-3">
+          <h1 className="text-xl font-bold">CollabPad</h1>
+        </div>
+        <ul className="flex space-x-6 items-center">
+          <li className="cursor-pointer hover:text-gray-400 transition">
+            <FaCog className="text-2xl" title="Settings" />
+          </li>
+          <li className="cursor-pointer hover:text-gray-400 transition">
+            <FaQuestion className="text-2xl" title="Help" />
+          </li>
+          <li className="cursor-pointer hover:text-gray-400 transition">
+            <FaShare className="text-2xl" title="Share" />
+          </li>
+        </ul>
+      </nav>
 
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <div className="w-16 bg-gray-100 border-r border-gray-300 flex flex-col items-center space-y-4 py-4">
-          <button onClick={() => setTool('pencil')} className={`p-2 rounded ${tool === 'pencil' ? 'bg-blue-500 text-white' : 'bg-white'} hover:bg-blue-500 hover:text-white`}>
-            <FaPencilAlt size={24} />
-          </button>
-          <button onClick={() => setTool('eraser')} className={`p-2 rounded ${tool === 'eraser' ? 'bg-blue-500 text-white' : 'bg-white'} hover:bg-blue-500 hover:text-white`}>
-            <FaEraser size={24} />
-          </button>
-          <button onClick={() => setTool('highlighter')} className={`p-2 rounded ${tool === 'highlighter' ? 'bg-blue-500 text-white' : 'bg-white'} hover:bg-blue-500 hover:text-white`}>
-            <FaHighlighter size={24} />
-          </button>
-          <button onClick={() => setTool('text')} className={`p-2 rounded ${tool === 'text' ? 'bg-blue-500 text-white' : 'bg-white'} hover:bg-blue-500 hover:text-white`}>
-            <FaFont size={24} />
-          </button>
-          <button onClick={toggleZoom} className="p-2 rounded bg-gray-500 text-white hover:bg-gray-400">
-            {zoomEnabled ? <FaSearchMinus size={24} /> : <FaSearch size={24} />}
-          </button>
-          <button onClick={clearCanvas} className="p-2 rounded bg-red-500 text-white hover:bg-red-400">
-            <FaTrashAlt size={24} />
-          </button>
+      <div className="flex flex-grow">
+        <div className="flex-1 bg-white">
+          <Tldraw key={whiteboardKey} />
         </div>
 
-        {/* Main Canvas Area */}
-        <TransformWrapper disabled={!zoomEnabled}>
-          <TransformComponent>
-            <div className="flex-1 bg-white relative">
-              <canvas
-                ref={canvasRef}
-                width={1200}
-                height={800}
-                className="w-full h-full border border-gray-300"
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-              />
-            </div>
-          </TransformComponent>
-        </TransformWrapper>
+        <div className="w-1/3 p-4 border-l border-gray-300 space-y-4">
+          <div className="h-[70vh] overflow-auto border p-4">
+            {messages.map((message, index) => (
+              <div key={index} className="my-2">
+                <strong>{message.sender}</strong>: {message.text}
+              </div>
+            ))}
+          </div>
+          <div className="flex">
+            <input
+              type="text"
+              className="border p-2 flex-grow"
+              value={currentMessage}
+              onChange={(e) => setCurrentMessage(e.target.value)}
+              placeholder="Type a message"
+            />
+            <button
+              className="p-2 bg-blue-500 text-white ml-2"
+              onClick={handleSendMessage}
+            >
+              Send
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Whiteboard;
