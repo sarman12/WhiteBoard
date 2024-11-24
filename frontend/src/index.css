@@ -1,37 +1,38 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-html{
-    scroll-behavior: smooth;
+html {
+  scroll-behavior: smooth;
 }
-
 .gradient-wallpaper {
-background: linear-gradient(to bottom right, #1a202c, #2d3748, #1a202c) !important;
-    position: relative;
-    overflow: hidden;
+  background: radial-gradient(circle at top left, #02060e, #1a202c, black),
+    linear-gradient(to bottom right, #0f1116, #050709, #1a202c);
+  position: relative;
+  overflow: hidden;
 }
 
 .gradient-wallpaper::before,
 .gradient-wallpaper::after {
-    content: '';
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.2;
-    filter: blur(50px);
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.5;
+  filter: blur(60px);
+  z-index: 1;
 }
 
 .gradient-wallpaper::before {
-    width: 1000px;
-    height: 1000px;
-    background: radial-gradient(circle, rgba(0, 255, 255, 0.9), transparent) !important;
-    /* top: -100px; */
-    /* left: -100px; */
+  width: 800px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(24, 209, 171, 0.8), transparent);
+  top: 10%;
+  left: 10%;
 }
 
 .gradient-wallpaper::after {
-    width: 1000px;
-    height: 1000px;
-    background: radial-gradient(circle, rgba(234, 4, 211, 0.8), transparent) !important;
-    bottom: -200px;
-    right: 0px;
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, rgba(244, 67, 227, 0.7), transparent);
+  bottom: 10%;
+  right: 15%;
 }

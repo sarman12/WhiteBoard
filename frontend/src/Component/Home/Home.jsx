@@ -5,14 +5,16 @@ import Hero from './Hero';
 import Feature from './Feature';
 import Footer from './Footer';
 import About from './About';
+import Testimonials from './Testimonials';
 function Home() {
   return (
     <>
       <Navbar />
-      <Hero />
       <div className="gradient-wallpaper">
+        <Hero />
         <Feature />
-        <About/>
+        <Testimonials/>
+        {/* <About/> */}
         <Footer />
       </div>
     </>

@@ -12,6 +12,7 @@
   "dependencies": {
     "@tldraw/tldraw": "^3.4.1",
     "core-js": "^3.39.0",
+    "emoji-picker-react": "^4.12.0",
     "fabric": "^6.5.1",
     "paper": "^0.12.18",
     "react": "^18.3.1",

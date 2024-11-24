@@ -1,19 +1,9 @@
 import React from 'react';
 import '../../index.css';
-import bg from '../../assets/collaboration.jpg'; // Your background image
-import mobile from '../../assets/modile_version.jpg'; // Optional: For mobile version
-
 function Hero() {
   return (
-    <div
-      className="relative bg-cover bg-center h-screen"
-      style={{
-        backgroundImage: `url(${bg})`,
-        backgroundPosition: 'center',
-        backgroundSize: 'cover',
-      }}
-    >
-      <div className="absolute inset-0 bg-black opacity-50"></div>
+    <div id='hero' className="relative bg-cover bg-center h-screen">
+      {/* <div className="absolute inset-0 bg-black opacity-50"></div> */}
 
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center text-white px-6 space-y-6 md:space-y-8">
         <h1 className="text-4xl font-extrabold md:text-6xl mb-4">
