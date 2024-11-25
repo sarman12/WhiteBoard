@@ -5,10 +5,10 @@ import '../../index.css';
 
 function Footer() {
   return (
-    <footer className="relative py-12 text-white px-10">
+    <footer id="contact" className="relative py-12 text-white px-10">
       <div className="relative z-10">
         <div className="w-full px-6 py-8 rounded-lg mb-10">
-          <h3 className="text-4xl text-center font-semibold text-teal-400 mb-4">Stay Updated!</h3>
+          <h3 className="text-4xl text-center font-extrabold text-[#f7e7ce]  mb-4">Stay Updated!</h3>
           <p className="text-sm text-center text-gray-200 mb-4">
             Sign up for our newsletter to get the latest updates and offers.
           </p>
@@ -21,6 +21,17 @@ function Footer() {
             <button className="bg-teal-500 text-black font-semibold p-3 rounded-r-xl hover:bg-teal-600 transition duration-300">
               Subscribe
             </button>
+          </div>
+        </div>
+
+        <div className="w-full  py-10 text-center mb-10 border-y-[1px] border-gray-600">
+
+          <h3 className="text-4xl font-extrabold text-[#f7e7ce] mb-6">Email Us</h3>
+          <div
+            onClick={() => window.location.href = 'mailto:sahaneearman601@gmail.com'}
+            className="text-4xl font-mono tracking-wide rounded-full text-gray-800 hover:text-teal-900  transition cursor-pointer bg-white py-4 px-6  inline-block"
+          >
+            sahaneearman601@gmail.com
           </div>
         </div>
 

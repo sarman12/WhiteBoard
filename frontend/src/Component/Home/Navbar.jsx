@@ -82,6 +82,12 @@ function Navbar() {
           >
             Testimonials
           </li>
+          <li
+            className="text-white font-medium text-xl hover:text-blue-400 cursor-pointer transition duration-200 md:text-[17px]"
+            onClick={() => handleScroll('contact')}
+          >
+            Contact Us
+          </li>
         </ul>
       </div>
     </div>

@@ -4,9 +4,11 @@ import '../../index.css';
 function Feature() {
   return (
     <div id="feature" className="relative py-10 border-y-[1px] border-gray-600">
+      <div className="absolute inset-0 bg-black opacity-50"></div>
+
       <div className="relative z-10 max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-5xl font-extrabold text-teal-400 mb-6">
+          <h2 className="text-5xl font-extrabold text-[#f7e7ce]  mb-6">
             Feature Highlights
           </h2>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">

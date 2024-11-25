@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import '../../index.css';
-import RegisterLogo from '../../assets/register.jpg'; 
+import RegisterLogo from '../../assets/register.jpg';
 import { useNavigate } from 'react-router';
-import { FaGoogle, FaFacebook } from 'react-icons/fa'; 
+import { FaGoogle, FaFacebook } from 'react-icons/fa';
 
 function Register() {
   const [loading, setLoading] = useState(false);
@@ -14,62 +14,86 @@ function Register() {
     setTimeout(() => {
       setLoading(false);
       navigate('/login');
-    }, 2000); 
+    }, 2000);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-800 to-pink-900 flex items-center justify-center relative">
-      <div className="absolute inset-0 bg-cover bg-center opacity-60" style={{ backgroundImage: `url(${RegisterLogo})` }}></div>
-      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
-      <div className="absolute inset-0 flex justify-center items-center text-white text-4xl font-bold z-0">
-        <p>Welcome to our Registration Page</p>
-      </div>
-      <div className="bg-black bg-opacity-50 p-8 rounded-lg shadow-lg w-96 z-10 backdrop-blur-lg">
-        <h2 className="text-3xl font-bold text-white text-center mb-6">Create an Account</h2>
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-40"
+        style={{ backgroundImage: `url(${RegisterLogo})` }}
+      ></div>
+      <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+
+      {/* Registration Card */}
+      <div className="z-10 backdrop-blur-lg bg-black/60 p-8 rounded-xl shadow-2xl w-[90%] max-w-md text-white">
+        <h2 className="text-4xl font-bold text-center mb-6">Register</h2>
+        <p className="text-center text-gray-300 mb-6">
+          Join us today! Create your account in a few simple steps.
+        </p>
         <form onSubmit={handleSubmit}>
           <div className="mb-2">
-            <label className="block text-gray-100 text-sm font-semibold mb-2">Full Name</label>
+            <label className="block text-gray-200 text-sm font-semibold mb-2">
+              Full Name
+            </label>
             <input
               type="text"
-              className="w-full p-3 rounded bg-gray-900 opacity-50 text-white focus:outline-none focus:ring-2 focus:ring-teal-400"
-              placeholder="Enter your Name"
+              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              placeholder="Enter your name"
               required
             />
           </div>
+
           <div className="mb-2">
-            <label className="block text-gray-100 text-sm font-semibold mb-2">Email</label>
+            <label className="block text-gray-200 text-sm font-semibold mb-2">
+              Email
+            </label>
             <input
               type="email"
-              className="w-full p-3 rounded bg-gray-900 opacity-50 text-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Enter your email"
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-100 text-sm font-semibold mb-2">Password</label>
+
+          <div className="mb-4">
+            <label className="block text-gray-200 text-sm font-semibold mb-2">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full p-3 rounded bg-gray-900 opacity-50 text-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
               placeholder="Enter your password"
               required
             />
           </div>
+
           <button
             type="submit"
-            className={`w-full bg-teal-500 text-black py-3 rounded font-semibold hover:bg-teal-600 transition duration-300 ${loading && 'cursor-wait'}`}
+            className={`w-full py-2 rounded-xl font-semibold bg-teal-500 text-black hover:bg-teal-600 transition duration-300 ${
+              loading && 'cursor-wait'
+            }`}
           >
-            {loading ? 'Please Wait...' : 'Register'}
+            {loading ? 'Registering...' : 'Register'}
           </button>
         </form>
-        <div className="flex justify-evenly mt-4">
-          <button className="flex items-center w-20 py-3 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition duration-300">
-            <FaFacebook className="m-auto" /> 
+
+        <div className="relative my-4 text-center">
+          <span className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 h-[1px] bg-gray-600"></span>
+          <span className="bg-black px-3 text-sm text-gray-400 relative">Or Register With</span>
+        </div>
+
+        <div className="flex justify-center gap-4">
+          <button className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition duration-300">
+            <FaFacebook size={20} />
           </button>
-          <button className="flex items-center w-20 py-3 rounded-full bg-red-600 text-white font-semibold hover:bg-red-700 transition duration-300">
-            <FaGoogle className="m-auto" />
+          <button className="flex items-center justify-center w-12 h-12 rounded-full bg-red-600 text-white hover:bg-red-700 transition duration-300">
+            <FaGoogle size={20} />
           </button>
         </div>
-        <p className="text-gray-400 text-center mt-4">
+
+        <p className="text-center text-gray-400 mt-3">
           Already have an account?{' '}
           <a href="/login" className="text-teal-400 hover:underline">
             Login
