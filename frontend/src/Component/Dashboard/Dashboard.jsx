@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import Avatar from "react-avatar";
+
+
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -14,10 +17,12 @@ import {
 import col from "../../assets/collaboration.png";
 import chat from "../../assets/chat.png";
 import logo from "../../assets/logo.webp";
+import video from "../../assets/videocall.png";
 import { useNavigate } from "react-router";
 
 function Dashboard() {
-  const navigate=useNavigate();
+  const navigate = useNavigate();
+  const [userData, setUserData] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentSlide, setCurrentSlide] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -25,14 +30,27 @@ function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user) {
+    setUserData(user);
+  } else {
+    console.warn("No user data found in localStorage");
+    navigate("/login");
+  }
+}, []);
+
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
     }, 60000);
-
     return () => clearInterval(interval);
   }, []);
 
-  const formattedTime = currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const formattedTime = currentTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const formattedDate = currentTime.toLocaleDateString();
 
   const slides = [
@@ -49,7 +67,7 @@ function Dashboard() {
     {
       title: "Real-Time Chat",
       description: "Keep the conversation going with our integrated chat feature.",
-      image: chat,
+      image: video,
     },
   ];
 
@@ -64,6 +82,21 @@ function Dashboard() {
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
+
+  const handleLogout = () => {
+    localStorage.clear(); 
+    navigate("/login");
+  };
+
+  const getInitials = (name) => {
+    const newName = name.charAt(0).toUpperCase() + name.charAt(1).toUpperCase();
+    return newName;
+  };
+
+  const initials = userData && userData.fullname ? getInitials(userData.fullname) : "";
+
+  const avatarUrl = `https://ui-avatars.com/api/?name=${initials}&background=random&color=fff`;
+
 
   return (
     <div
@@ -83,7 +116,7 @@ function Dashboard() {
               darkMode ? "text-white" : "text-gray-800"
             }`}
           >
-            Collab <span className={darkMode ? "text-gray-300" : "text-gray-500"}>Pad</span>
+            Collab<span className={darkMode ? "text-gray-300" : "text-gray-500"}>Pad</span>
           </h1>
         </div>
 
@@ -94,9 +127,9 @@ function Dashboard() {
         </div>
 
         <div className="hidden sm:flex items-center space-x-3">
-          <div className="text-right">
-            <p className="text-sm">{formattedTime}</p>
-            <p className="text-xs text-gray-500">{formattedDate}</p>
+          <div className="text-right flex items-center p-2 space-x-2">
+            <p className="text-xl text-gray-500">{formattedTime}</p>
+            <p className="text-lg  text-gray-500">{formattedDate}</p>
           </div>
           <button title="Settings">
             <FaCog className="text-lg sm:text-xl" />
@@ -104,19 +137,50 @@ function Dashboard() {
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className="h-8 w-8 sm:h-10 sm:w-10 bg-gray-300 rounded-full"
+              className=" bg-blue-700
+              h-8 w-8 sm:h-10 sm:w-10 rounded-full "
             >
-              <FaUserCircle className="w-full h-full text-gray-500" />
+              <img src={avatarUrl} className="rounded-full"  alt="" />
+              
             </button>
-            {profileOpen && (
-              <div className="absolute right-0 mt-2 bg-white shadow-lg rounded-lg p-4 w-36 sm:w-44">
-                <p className="font-semibold text-gray-800 text-sm">John Doe</p>
-                <p className="text-gray-500 text-xs mb-3">john.doe@example.com</p>
-                <button className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 text-xs">
-                  Logout
-                </button>
+            {profileOpen && userData && (
+            <div className="absolute right-0 mt-2 text-center bg-white shadow-2xl rounded-2xl p-6 w-60 sm:w-[400px]">
+              <p className="text-gray-500 text-xl mb-3">{userData.email}</p>
+
+              <p className="font-semibold text-gray-800 text-3xl mb-4">Hi, {userData.fullname}!</p>
+
+              <div className="flex justify-center mb-4">
+                
+                  <img src={avatarUrl} className="rounded-full w-[150px]"  alt="" />
+
               </div>
-            )}
+
+              <button
+                onClick={() => alert("Change profile photo clicked")}
+                className="w-full text-blue-500 text-sm mb-3 hover:underline"
+              >
+                Change Photo
+              </button>
+
+              <div className="">
+                <button
+                    onClick={handleLogout}
+                    className="px-4 text-sm bg-blue-600 text-white py-2 rounded mr-10 hover:bg-blue-600 "
+                  >
+                    Logout
+                  </button>
+                  <button 
+                      className=" text-sm  py-2  hover:border-b-2 border-blue-700 "
+                      >
+
+                    Add Another Account
+                  </button>
+              </div>
+
+              
+            </div>
+          )}
+
           </div>
           <button onClick={toggleDarkMode}>
             {darkMode ? <FaSun className="text-yellow-500" /> : <FaMoon className="text-gray-800" />}
@@ -152,7 +216,7 @@ function Dashboard() {
                 placeholder="Enter code or link"
                 className="flex-grow px-2 py-2 sm:py-3 focus:outline-none "
               />
-              <button className="bg-gray-300 px-4 py-2 hover:bg-gray-400">Join</button>
+              <button className="bg-gray-300 px-4 py-3 hover:bg-gray-400">Join</button>
             </div>
           </div>
         </section>

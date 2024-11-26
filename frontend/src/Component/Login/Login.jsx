@@ -1,11 +1,56 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import "../../index.css";
-import LoginLogo from "../../assets/login.jpg"; // Background image
-import { FaGoogle, FaFacebook } from "react-icons/fa"; // Icons
+import LoginLogo from "../../assets/login.jpg";
+import { FaGoogle, FaFacebook } from "react-icons/fa";
 import { useNavigate } from "react-router";
+import axios from 'axios'
+
 
 function Login() {
+  const [email,setEmail]= useState("");
+  const [password,setPassword]=useState("");
   const navigate = useNavigate();
+  const [success,setSuccess] = useState(false);
+  const [error,setError] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(false);
+
+    if (!email || !password) {
+      setError(true);
+      return;
+    }
+
+    try {
+      const response = await axios.post('http://localhost:3000/login', {
+        email,
+        password,
+      });
+
+      if (response.status === 200) {
+
+        setSuccess(true);
+        setError(false);
+
+        const { user } = response.data;
+
+        localStorage.setItem('isLoggedIn', true);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        console.log('User details:', user);
+setTimeout(() => navigate('/dashboard'), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(true);
+      setSuccess(false);
+    }
+  };
+
+
+  
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800 relative">
@@ -18,10 +63,25 @@ function Login() {
         <h2 className="text-4xl font-extrabold text-teal-400 text-center mb-6">
           Welcome Back
         </h2>
-        <p className="text-sm text-gray-400 text-center mb-8">
-          Login to access your account.
-        </p>
-        <form>
+
+        {error && (
+          <p className="text-sm text-red-800 text-center mb-8">
+            Error Occcuring,Please Provide all the Valid details
+          </p>
+        )}
+        {success && (
+          <p className="text-sm text-green-700 text-center mb-8">
+            Redirecting to he dashboard page
+          </p>
+        )}
+        {!success && !error && (
+          <p className="text-sm text-gray-400 text-center mb-8">
+            Login to access your account.
+          </p>
+
+        )}
+        
+        <form onSubmit={handleSubmit}>
           <div className="mb-5">
             <label className="block text-sm font-medium text-gray-200 mb-2">
               Email Address
@@ -30,6 +90,8 @@ function Login() {
               type="email"
               className="w-full p-4 rounded-2xl bg-white/10 backdrop-blur-lg text-white placeholder-gray-400 border border-white/20 shadow-lg focus:outline-none "
               placeholder="Enter your email"
+              value={email}
+              onChange={(e)=>setEmail(e.target.value)}
             />
 
           </div>
@@ -42,6 +104,8 @@ function Login() {
               type="password"
               className="w-full p-4 rounded-2xl bg-[#fff]/10 backdrop-blur-lg text-white placeholder-gray-400 border border-white/20 shadow-lg focus:outline-none "
               placeholder="Enter your Password.."
+              value={password}
+              onChange={(e)=>setPassword(e.target.value)}
             />
 
           </div>
@@ -49,7 +113,7 @@ function Login() {
           <button
             type="submit"
             className="w-full py-3 bg-gradient-to-r from-teal-400 to-teal-600 text-white rounded-lg font-semibold hover:opacity-90 transition duration-300"
-            onClick={() => navigate("/dashboard")}
+            // onClick={() => navigate("/dashboard")}
           >
             Login
           </button>

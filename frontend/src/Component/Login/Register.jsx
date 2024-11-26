@@ -3,35 +3,66 @@ import '../../index.css';
 import RegisterLogo from '../../assets/register.jpg';
 import { useNavigate } from 'react-router';
 import { FaGoogle, FaFacebook } from 'react-icons/fa';
+import axios from 'axios';
 
 function Register() {
   const [loading, setLoading] = useState(false);
+  const [fullname, setFullname] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    setError('');
+    
+    try {
+      // Make the POST request for registration
+      const response = await axios.post('http://localhost:3000/register', {
+        fullname,
+        email,
+        password,
+      });
+
+      if (response.status === 201) {
+        setSuccess(true);
+        setTimeout(() => navigate('/login'), 2000); // Redirect to login page after successful registration
+      } else {
+        setError('Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again later.');
+      console.error(err);
+    } finally {
       setLoading(false);
-      navigate('/login');
-    }, 2000);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-800 to-pink-900 flex items-center justify-center relative">
-      {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-40"
         style={{ backgroundImage: `url(${RegisterLogo})` }}
       ></div>
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
 
-      {/* Registration Card */}
       <div className="z-10 backdrop-blur-lg bg-black/60 p-8 rounded-xl shadow-2xl w-[90%] max-w-md text-white">
         <h2 className="text-4xl font-bold text-center mb-6">Register</h2>
         <p className="text-center text-gray-300 mb-6">
           Join us today! Create your account in a few simple steps.
         </p>
+
+        {error && <p className="text-sm text-red-600 text-center mb-4">{error}</p>}
+        {success && (
+          <p className="text-sm text-green-600 text-center mb-4">
+            Registration successful! Redirecting to login...
+          </p>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="mb-2">
             <label className="block text-gray-200 text-sm font-semibold mb-2">
@@ -39,9 +70,11 @@ function Register() {
             </label>
             <input
               type="text"
-              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none"
               placeholder="Enter your name"
               required
+              value={fullname}
+              onChange={(e) => setFullname(e.target.value)}
             />
           </div>
 
@@ -51,9 +84,11 @@ function Register() {
             </label>
             <input
               type="email"
-              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none"
               placeholder="Enter your email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
@@ -63,9 +98,11 @@ function Register() {
             </label>
             <input
               type="password"
-              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
+              className="w-full p-3 rounded-xl bg-white/10 backdrop-blur-sm text-gray-200 placeholder-gray-400 focus:outline-none"
               placeholder="Enter your password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
@@ -81,7 +118,9 @@ function Register() {
 
         <div className="relative my-4 text-center">
           <span className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 h-[1px] bg-gray-600"></span>
-          <span className="bg-black px-3 text-sm text-gray-400 relative">Or Register With</span>
+          <span className="bg-black px-3 text-sm text-gray-400 relative">
+            Or Register With
+          </span>
         </div>
 
         <div className="flex justify-center gap-4">
