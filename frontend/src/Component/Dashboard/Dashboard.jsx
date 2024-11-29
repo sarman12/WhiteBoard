@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import Avatar from "react-avatar";
 
+import axios  from "axios";
 
 import {
   FaArrowLeft,
@@ -22,6 +22,7 @@ import { useNavigate } from "react-router";
 
 function Dashboard() {
   const navigate = useNavigate();
+  const [sessionCode,setSessionCode]= useState("")
   const [userData, setUserData] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -38,6 +39,80 @@ function Dashboard() {
     navigate("/login");
   }
 }, []);
+
+
+  const createSession = async () => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!user) {
+    alert("Please log in to create a session.");
+    navigate("/login");
+    return;
+  }
+
+  try {
+    const response = await axios.post("http://localhost:3000/create-session", {
+      userId: user.id,
+    });
+
+    if (response.status === 201) {
+      const sessionCode = response.data.session.sessionCode;
+      const leaderId = user.id;
+      localStorage.setItem("leaderId", leaderId);
+      navigate(`/whiteboard/${sessionCode}`, {
+        state: {
+          sessionCode,
+          leader: {
+            name: user.fullname,
+            role: "Leader",
+          },
+        },
+      });
+    } else {
+      alert("Failed to create a session.");
+    }
+  } catch (error) {
+    console.error("Error creating session:", error);
+    alert("An error occurred while creating the session.");
+  }
+};
+
+const joinSession = async (sessionCode) => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (!user) {
+    alert("Please log in to join a session.");
+    navigate("/login");
+    return;
+  }
+
+  if (!sessionCode) {
+    alert("Please enter a session code.");
+    return;
+  }
+
+  try {
+    const response = await axios.post("http://localhost:3000/join-session", {
+      sessionCode,
+    });
+
+    if (response.status === 200) {
+      navigate(`/whiteboard/${sessionCode}`, {
+        state: {
+          sessionCode,
+          participant: {
+            name: user.fullname,
+            role: "Participant",
+          },
+        },
+      });
+    } else {
+      alert("Session not found.");
+    }
+  } catch (error) {
+    console.error("Error joining session:", error);
+    alert("Invalid session code or error occurred.");
+  }
+};
+
 
 
   useEffect(() => {
@@ -205,7 +280,7 @@ function Dashboard() {
             Collaborate in real-time on a shared whiteboard, perfect for brainstorming, sketching, or teaching.
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button className="flex items-center justify-center w-[300px] m-auto text-sm md:m-0 bg-blue-500 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-600" onClick={()=>{navigate('/whiteboard')}}>
+            <button className="flex items-center justify-center w-[300px] m-auto text-sm md:m-0 bg-blue-500 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-600" onClick={createSession}>
               <FaVideo className="mr-2" />
               Start Whiteboard
             </button>
@@ -214,9 +289,16 @@ function Dashboard() {
               <input
                 type="text"
                 placeholder="Enter code or link"
-                className="flex-grow px-2 py-2 sm:py-3 focus:outline-none "
+                className="flex-grow px-2 py-2 sm:py-3 focus:outline-none"
+                onChange={(e) => setSessionCode(e.target.value)}
               />
-              <button className="bg-gray-300 px-4 py-3 hover:bg-gray-400">Join</button>
+              <button
+                onClick={() => joinSession(sessionCode)}
+                className="bg-gray-300 px-4 py-3 hover:bg-gray-400"
+              >
+                Join
+              </button>
+
             </div>
           </div>
         </section>

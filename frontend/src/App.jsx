@@ -37,7 +37,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/whiteboard" element={<Whiteboard />} />
+        <Route path="/whiteboard/:sessionCode" element={<Whiteboard />} />
       </Routes>
     </BrowserRouter>
   );
