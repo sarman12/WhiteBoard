@@ -87,38 +87,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/create-session", async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).send("User ID is required.");
-
-  try {
-    const sessionCode = nanoid(14);
-    const session = await WhiteboardSession.create({ sessionCode, createdBy: userId });
-    const leader = await User.findByPk(userId);
-
-    res.status(201).send({ message: "Session created.", session, leader });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Internal server error.");
-  }
-});
-
-app.post("/join-session", async (req, res) => {
-  const { sessionCode } = req.body;
-  if (!sessionCode) return res.status(400).send("Session code is required.");
-
-  try {
-    const session = await WhiteboardSession.findOne({ where: { sessionCode } });
-    if (!session) return res.status(404).send("Session not found.");
-
-    const participant = await User.findByPk(session.createdBy);
-
-    res.status(200).send({ message: "Joined session successfully.", session, participant });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Internal server error.");
-  }
-});
 
 
 

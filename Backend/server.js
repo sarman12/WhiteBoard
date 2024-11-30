@@ -14,22 +14,32 @@ const io = new Server(server, {
   },
 });
 
+// Room structure
 const rooms = {};
 
 io.on('connection', (socket) => {
-  console.log('New client connected:', socket.id);
+  console.log('Client connected:', socket.id);
 
+  // When a user joins a room
   socket.on('joinRoom', ({ roomID, name }) => {
     if (!rooms[roomID]) {
-      rooms[roomID] = [];
+      rooms[roomID] = { users: [], host: null };
     }
 
-    const userExists = rooms[roomID].some((user) => user.name === name);
+    const userExists = rooms[roomID].users.some((user) => user.name === name);
 
     if (!userExists) {
-      rooms[roomID].push({ id: socket.id, name });
+      rooms[roomID].users.push({ id: socket.id, name });
+      if (!rooms[roomID].host) {
+        rooms[roomID].host = socket.id; // First user becomes the host
+      }
       socket.join(roomID);
-      io.to(roomID).emit('updateUsers', rooms[roomID].map((user) => user.name));
+
+      // Notify users about the updated room status
+      io.to(roomID).emit('updateUsers', {
+        users: rooms[roomID].users.map((user) => user.name),
+        host: rooms[roomID].host,
+      });
     }
   });
 
@@ -38,19 +48,38 @@ io.on('connection', (socket) => {
   });
 
   socket.on('clear', (roomID) => {
-    io.to(roomID).emit('clear');
+    if (rooms[roomID] && rooms[roomID].host === socket.id) {
+      io.to(roomID).emit('clear'); // Only the host can clear
+    } else {
+      socket.emit('notHost'); // Notify non-hosts that they lack permission
+    }
   });
 
+  // When a user disconnects
   socket.on('disconnect', () => {
     for (const roomID in rooms) {
-      rooms[roomID] = rooms[roomID].filter((user) => user.id !== socket.id);
+      const room = rooms[roomID];
+      room.users = room.users.filter((user) => user.id !== socket.id);
 
-      io.to(roomID).emit('updateUsers', rooms[roomID].map((user) => user.name));
+      // If the host disconnects, assign a new host
+      if (room.host === socket.id) {
+        room.host = room.users[0]?.id || null; // Assign new host or set to null
+      }
+
+      // Notify users about the updated room status
+      io.to(roomID).emit('updateUsers', {
+        users: room.users.map((user) => user.name),
+        host: room.host,
+      });
+
+      // Remove empty rooms
+      if (room.users.length === 0) {
+        delete rooms[roomID];
+      }
     }
-    console.log('Client disconnected:', socket.id);
   });
 });
 
 server.listen(5000, () => {
-  console.log('Server running on http://localhost:5000');
+  console.log('Server is running on http://localhost:5000');
 });

@@ -8,14 +8,12 @@ import {
   FaCog,
   FaSun,
   FaMoon,
-  FaBars,
-  FaTimes,
 } from "react-icons/fa";
 import col from "../../assets/collaboration.png";
 import chat from "../../assets/chat.png";
 import video from "../../assets/videocall.png";
-
 const socket = io("http://localhost:5000");
+
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -41,8 +39,6 @@ function Dashboard() {
     const formattedCode = randomString.match(/.{1,4}/g).join('-');
     setRoomCode(formattedCode);
   };
-
-
 
   const handleCreateRoom = (e) => {
     e.preventDefault();
@@ -171,7 +167,7 @@ function Dashboard() {
       </header>
 
       <main className="flex-grow h-[50vh] md:h-[82.7vh] flex flex-col sm:flex-row items-center justify-evenly px-4 py-6 gap-8">
-        <section className="border-2 border-red-500  text-center sm:text-left max-w-2xl py-10 px-10 sm:m-auto md:m-0">
+        <section className="  text-center sm:text-left max-w-2xl py-10 px-10 sm:m-auto md:m-0">
           <h1 className="text-2xl sm:text-4xl font-bold">Real-time Whiteboard Collaboration</h1>
           <p className="text-gray-600 mt-3 text-sm sm:text-base">
             Collaborate in real-time on a shared whiteboard, perfect for brainstorming, sketching, or teaching.
