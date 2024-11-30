@@ -21,7 +21,6 @@ function Register() {
     setError('');
     
     try {
-      // Make the POST request for registration
       const response = await axios.post('http://localhost:3000/register', {
         fullname,
         email,
@@ -30,7 +29,7 @@ function Register() {
 
       if (response.status === 201) {
         setSuccess(true);
-        setTimeout(() => navigate('/login'), 2000); // Redirect to login page after successful registration
+        setTimeout(() => navigate('/login'), 2000); 
       } else {
         setError('Registration failed. Please try again.');
       }

@@ -36,10 +36,9 @@ function Login() {
         const { user } = response.data;
 
         localStorage.setItem('isLoggedIn', true);
-        localStorage.setItem('user', JSON.stringify(user));
 
         console.log('User details:', user);
-setTimeout(() => navigate('/dashboard'), 2000);
+setTimeout(() => navigate('/dashboard', { state: { user } }), 2000);
       }
     } catch (err) {
       console.error(err);

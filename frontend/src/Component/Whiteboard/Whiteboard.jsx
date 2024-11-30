@@ -1,92 +1,56 @@
-import React, { useRef, useState, useEffect } from "react";
-import { useParams,useLocation } from "react-router-dom";
-import { FaCog, FaQuestion, FaShare } from "react-icons/fa";
-import ChatInterface from "./ChatInterface";
-import "../../index.css";
-import io from 'socket.io-client';
+import React, { useRef, useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { FaCog, FaQuestion, FaShare } from 'react-icons/fa';
 
-const Whiteboard = () => {
-  const location = useLocation();
-  const { sessionCode, leader, participant } = location.state || {}; 
+const socket = io('http://localhost:5000');
 
+function Whiteboard() {
+  const { roomID } = useParams();
+  const [searchParams] = useSearchParams();
+  const name = searchParams.get('name');
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [tool, setTool] = useState("pencil");
-  const [color, setColor] = useState("#000000");
-  const [lineWidth, setLineWidth] = useState(2);
-  const [whiteboardData, setWhiteboardData] = useState(null);
-  const [socket, setSocket] = useState(null);
-  const [participants, setParticipants] = useState([]);
+  const [brushColor, setBrushColor] = useState('#000000');
+  const [brushSize, setBrushSize] = useState(5);
+  const [usersInRoom, setUsersInRoom] = useState([]);
+
   useEffect(() => {
-    const newSocket = io("http://localhost:5000");
-    setSocket(newSocket);
-    newSocket.emit("joinSession", { sessionCode, user: { name: participant?.name || "Anonymous", id: Date.now() } });
+    if (roomID && name) {
+      console.log(`Joining room: ${roomID} as ${name}`);
+      socket.emit('joinRoom', { roomID, name });
+    }
 
-    newSocket.on("whiteboard-update", (data) => {
-      setWhiteboardData(data);
-    });
-
-    newSocket.on("userJoined", (user) => {
-      setParticipants((prev) => [...prev, user]);
-    });
-
-    newSocket.on("userLeft", (userId) => {
-      setParticipants((prev) => prev.filter((user) => user.id !== userId));
+    socket.on('updateUsers', (users) => {
+      console.log('Updated users in room:', users);
+      setUsersInRoom(users);
     });
 
     return () => {
-      newSocket.disconnect();
+      socket.off('updateUsers');
     };
-  }, [sessionCode]);
+  }, [roomID, name]);
 
-  useEffect(() => {
-    const fetchSessionDetails = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/join-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ sessionCode }),
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          // setLeader(data.leader); // Set the leader's details
-          // setParticipants([data.leader]); // Initialize participants with the leader
-        } else {
-          console.error("Error fetching session:", data.message);
-        }
-      } catch (error) {
-        console.error("Error connecting to the server:", error);
-      }
-    };
-
-    fetchSessionDetails();
-  }, [sessionCode]);
-
-  const handleWhiteboardChange = (data) => {
-    setWhiteboardData(data);
-    if (socket) {
-      socket.emit("whiteboard-update", { sessionCode, data }); 
-    }
-  };
-
-  useEffect(() => {
+  const initializeCanvas = () => {
     const canvas = canvasRef.current;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight * 2;
-    canvas.style.width = "100%";
-    canvas.style.height = "100%";
+    canvas.width = window.innerWidth * 0.8;
+    canvas.height = window.innerHeight * 0.8;
+    canvas.style.border = '1px solid black';
 
-    const context = canvas.getContext("2d");
-    context.scale(2, 2);
-    context.lineCap = "round";
-    context.strokeStyle = color;
-    context.lineWidth = lineWidth;
+    const context = canvas.getContext('2d');
+    context.lineCap = 'round';
+    context.strokeStyle = brushColor;
+    context.lineWidth = brushSize;
     contextRef.current = context;
-  }, [color, lineWidth]);
+  };
+  useEffect(() => {
+    initializeCanvas();
+    if (contextRef.current) {
+      contextRef.current.strokeStyle = brushColor;
+      contextRef.current.lineWidth = brushSize;
+    }
+  }, [brushColor, brushSize]);
 
   const startDrawing = ({ nativeEvent }) => {
     const { offsetX, offsetY } = nativeEvent;
@@ -95,47 +59,48 @@ const Whiteboard = () => {
     setIsDrawing(true);
   };
 
+  const stopDrawing = () => {
+    if (!isDrawing) return;
+    contextRef.current.closePath();
+    setIsDrawing(false);
+  };
 
   const draw = ({ nativeEvent }) => {
     if (!isDrawing) return;
     const { offsetX, offsetY } = nativeEvent;
     contextRef.current.lineTo(offsetX, offsetY);
     contextRef.current.stroke();
-
-    // Emit drawing changes to other users
-    if (socket) {
-      socket.emit("whiteboard-update", { sessionCode, data: { offsetX, offsetY, tool, color, lineWidth } });
-    }
-  };
-
-
-  const stopDrawing = () => {
-    contextRef.current.closePath();
-    setIsDrawing(false);
+    socket.emit('drawing', {
+      roomID,
+      data: { x: offsetX, y: offsetY, color: brushColor, size: brushSize },
+    });
   };
 
   const clearCanvas = () => {
-    const canvas = canvasRef.current;
-    contextRef.current.clearRect(0, 0, canvas.width, canvas.height);
-    // Emit clear canvas action to others
-    if (socket) {
-      socket.emit("clear-whiteboard", { sessionCode });
-    }
+    contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    socket.emit('clear', roomID);
   };
+  useEffect(() => {
+    socket.on('drawing', ({ x, y, color, size }) => {
+      const context = contextRef.current;
+      context.strokeStyle = color;
+      context.lineWidth = size;
+      context.lineTo(x, y);
+      context.stroke();
+    });
 
-  const handleToolChange = (tool) => {
-    setTool(tool);
-    if (tool === "eraser") {
-      contextRef.current.strokeStyle = "#FFFFFF";
-      setLineWidth(10);
-    } else {
-      contextRef.current.strokeStyle = color;
-      setLineWidth(tool === "highlighter" ? 10 : 2);
-    }
-  };
+    socket.on('clear', () => {
+      contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    });
+
+    return () => {
+      socket.off('drawing');
+      socket.off('clear');
+    };
+  }, []);
 
   return (
-    <div className="w-[100vw] h-[100vh] flex flex-col">
+    <div className="bg-white flex flex-col items-center">
       <nav className="p-2 px-5 bg-slate-200 w-full flex justify-between items-center">
         <div>
           <img
@@ -148,7 +113,7 @@ const Whiteboard = () => {
         <div className="flex items-center space-x-3">
           <h1 className="text-xl font-bold">CollabPad</h1>
           <span className="bg-blue-500 text-white px-3 py-1 rounded">
-            Session Code: {sessionCode}
+            Session Code: {roomID}
           </span>
         </div>
 
@@ -167,58 +132,45 @@ const Whiteboard = () => {
         </div>
       </nav>
 
-      <div className="flex flex-grow">
-        {/* Whiteboard Section */}
-        <div className="flex-[3] bg-white relative flex flex-col">
-          <div className="absolute top-4 left-4 z-10 flex space-x-3">
-            <button
-              onClick={() => handleToolChange("pencil")}
-              className={`px-3 py-1 rounded ${tool === "pencil" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-            >
-              Pencil
-            </button>
-            <button
-              onClick={() => handleToolChange("pen")}
-              className={`px-3 py-1 rounded ${tool === "pen" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-            >
-              Pen
-            </button>
-            <button
-              onClick={() => handleToolChange("highlighter")}
-              className={`px-3 py-1 rounded ${tool === "highlighter" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-            >
-              Highlighter
-            </button>
-            <button
-              onClick={() => handleToolChange("eraser")}
-              className={`px-3 py-1 rounded ${tool === "eraser" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
-            >
-              Eraser
-            </button>
-            <button onClick={clearCanvas} className="px-3 py-1 bg-red-500 text-white rounded">
-              Clear
-            </button>
-            <input
-              type="color"
-              value={color}
-              onChange={(e) => setColor(e.target.value)}
-              className="w-10 h-10 border-none cursor-pointer"
-            />
-          </div>
-          <canvas
-            ref={canvasRef}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
-            className="flex-1"
-          />
-        </div>
-
-        <ChatInterface />
+      <div className="bg-white">
+        <h2 className="text-lg font-bold my-4">Users in Room:</h2>
+        <ul className="flex">
+          {usersInRoom.map((user, index) => (
+            <li key={index}>{user}</li>
+          ))}
+        </ul>
       </div>
+
+      <div className="bg-white flex items-center my-4">
+        <button onClick={clearCanvas} className="bg-red-500 text-white py-2 px-4 rounded">
+          Clear Canvas
+        </button>
+        <input
+          type="color"
+          value={brushColor}
+          onChange={(e) => setBrushColor(e.target.value)}
+          className="ml-4"
+        />
+        <input
+          type="number"
+          value={brushSize}
+          onChange={(e) => setBrushSize(e.target.value)}
+          min="1"
+          max="50"
+          className="ml-4 p-2"
+        />
+      </div>
+
+      <canvas
+      className='bg-white'
+        ref={canvasRef}
+        onMouseDown={startDrawing}
+        onMouseUp={stopDrawing}
+        onMouseMove={draw}
+      />
     </div>
   );
-};
+}
 
 export default Whiteboard;
+ 

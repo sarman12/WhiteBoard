@@ -1,119 +1,66 @@
 import React, { useState, useEffect } from "react";
-
-import axios  from "axios";
-
+import { useLocation, useNavigate } from "react-router";
+import { io } from "socket.io-client";
+import logo from "../../assets/logo.webp";
 import {
   FaArrowLeft,
   FaArrowRight,
   FaCog,
-  FaUserCircle,
-  FaKeyboard,
-  FaVideo,
-  FaMoon,
   FaSun,
+  FaMoon,
   FaBars,
   FaTimes,
 } from "react-icons/fa";
 import col from "../../assets/collaboration.png";
 import chat from "../../assets/chat.png";
-import logo from "../../assets/logo.webp";
 import video from "../../assets/videocall.png";
-import { useNavigate } from "react-router";
+
+const socket = io("http://localhost:5000");
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [sessionCode,setSessionCode]= useState("")
-  const [userData, setUserData] = useState(null);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const location = useLocation();
+  const { state } = location || {};
+  const { user } = state || {};
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [roomCode, setRoomCode] = useState("");
+  const [joinRoomCode, setJoinRoomCode] = useState("");
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user) {
-    setUserData(user);
-  } else {
-    console.warn("No user data found in localStorage");
-    navigate("/login");
-  }
-}, []);
-
-
-  const createSession = async () => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) {
-    alert("Please log in to create a session.");
-    navigate("/login");
-    return;
-  }
-
-  try {
-    const response = await axios.post("http://localhost:3000/create-session", {
-      userId: user.id,
-    });
-
-    if (response.status === 201) {
-      const sessionCode = response.data.session.sessionCode;
-      const leaderId = user.id;
-      localStorage.setItem("leaderId", leaderId);
-      navigate(`/whiteboard/${sessionCode}`, {
-        state: {
-          sessionCode,
-          leader: {
-            name: user.fullname,
-            role: "Leader",
-          },
-        },
-      });
-    } else {
-      alert("Failed to create a session.");
+    if (!user) {
+      navigate("/login");
     }
-  } catch (error) {
-    console.error("Error creating session:", error);
-    alert("An error occurred while creating the session.");
-  }
-};
+  }, [user, navigate]);
 
-const joinSession = async (sessionCode) => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (!user) {
-    alert("Please log in to join a session.");
-    navigate("/login");
-    return;
-  }
+  const generateRoomCode = () => {
+    const randomString = Math.random().toString(36).substring(2, 15).toUpperCase();
+    const formattedCode = randomString.match(/.{1,4}/g).join('-');
+    setRoomCode(formattedCode);
+  };
 
-  if (!sessionCode) {
-    alert("Please enter a session code.");
-    return;
-  }
 
-  try {
-    const response = await axios.post("http://localhost:3000/join-session", {
-      sessionCode,
-    });
 
-    if (response.status === 200) {
-      navigate(`/whiteboard/${sessionCode}`, {
-        state: {
-          sessionCode,
-          participant: {
-            name: user.fullname,
-            role: "Participant",
-          },
-        },
-      });
-    } else {
-      alert("Session not found.");
+  const handleCreateRoom = (e) => {
+    e.preventDefault();
+    if (user.fullname && roomCode) {
+      socket.emit("joinRoom", { roomID: roomCode, name: user.fullname });
+      navigate(`/whiteboard/${roomCode}?name=${user.fullname}`);
     }
-  } catch (error) {
-    console.error("Error joining session:", error);
-    alert("Invalid session code or error occurred.");
-  }
-};
+  };
 
+  const handleJoinRoom = (e) => {
+    e.preventDefault();
+    if (user.fullname && joinRoomCode) {
+      socket.emit("joinRoom", { roomID: joinRoomCode, name: user.fullname });
+      navigate(`/whiteboard/${joinRoomCode}?name=${user.fullname}`);
+    }
+  };
 
+  const toggleDarkMode = () => setDarkMode(!darkMode);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -131,7 +78,8 @@ const joinSession = async (sessionCode) => {
   const slides = [
     {
       title: "Welcome to the Whiteboard",
-      description: "Join the whiteboard to collaborate, sketch, and communicate with your team in real-time.",
+      description:
+        "Join the whiteboard to collaborate, sketch, and communicate with your team in real-time.",
       image: col,
     },
     {
@@ -154,57 +102,36 @@ const joinSession = async (sessionCode) => {
     setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
-
   const handleLogout = () => {
-    localStorage.clear(); 
     navigate("/login");
   };
 
-  const getInitials = (name) => {
-    const newName = name.charAt(0).toUpperCase() + name.charAt(1).toUpperCase();
-    return newName;
-  };
+  const getInitials = (name) =>
+    name
+      ? name
+          .split(" ")
+          .map((n) => n.charAt(0).toUpperCase())
+          .join("")
+      : "U";
 
-  const initials = userData && userData.fullname ? getInitials(userData.fullname) : "";
+  const initials = user ? getInitials(user.fullname) : "U";
 
   const avatarUrl = `https://ui-avatars.com/api/?name=${initials}&background=random&color=fff`;
 
-
   return (
-    <div
-      className={`flex flex-col min-h-screen ${
-        darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"
-      }`}
-    >
-      <header
-        className={`sticky top-0 z-50 border-b-2 ${
-          darkMode ? "border-gray-700" : ""
-        } px-16 py-3 flex items-center justify-between bg-white shadow-md`}
-      >
+    <div className={`min-h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"}`}>
+      <header className="sticky top-0 z-50 px-16 py-3 flex items-center justify-between bg-white shadow-md">
         <div className="flex items-center gap-3">
           <img src={logo} className="w-10 h-10 rounded-full" alt="Logo" />
-          <h1
-            className={`text-xl sm:text-2xl font-bold ${
-              darkMode ? "text-white" : "text-gray-800"
-            }`}
-          >
-            Collab<span className={darkMode ? "text-gray-300" : "text-gray-500"}>Pad</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+            Collab<span className="text-gray-500">Pad</span>
           </h1>
-        </div>
-
-        <div className="sm:hidden">
-          <button onClick={() => setMenuOpen(!menuOpen)}>
-            {menuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
-          </button>
         </div>
 
         <div className="hidden sm:flex items-center space-x-3">
           <div className="text-right flex items-center p-2 space-x-2">
             <p className="text-xl text-gray-500">{formattedTime}</p>
-            <p className="text-lg  text-gray-500">{formattedDate}</p>
+            <p className="text-lg text-gray-500">{formattedDate}</p>
           </div>
           <button title="Settings">
             <FaCog className="text-lg sm:text-xl" />
@@ -212,50 +139,30 @@ const joinSession = async (sessionCode) => {
           <div className="relative">
             <button
               onClick={() => setProfileOpen(!profileOpen)}
-              className=" bg-blue-700
-              h-8 w-8 sm:h-10 sm:w-10 rounded-full "
+              className="bg-blue-700 h-8 w-8 sm:h-10 sm:w-10 rounded-full"
             >
-              <img src={avatarUrl} className="rounded-full"  alt="" />
-              
+              <img src={avatarUrl} className="rounded-full" alt="Avatar" />
             </button>
-            {profileOpen && userData && (
-            <div className="absolute right-0 mt-2 text-center bg-white shadow-2xl rounded-2xl p-6 w-60 sm:w-[400px]">
-              <p className="text-gray-500 text-xl mb-3">{userData.email}</p>
-
-              <p className="font-semibold text-gray-800 text-3xl mb-4">Hi, {userData.fullname}!</p>
-
-              <div className="flex justify-center mb-4">
-                
-                  <img src={avatarUrl} className="rounded-full w-[150px]"  alt="" />
-
-              </div>
-
-              <button
-                onClick={() => alert("Change profile photo clicked")}
-                className="w-full text-blue-500 text-sm mb-3 hover:underline"
-              >
-                Change Photo
-              </button>
-
-              <div className="">
-                <button
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 text-center bg-white shadow-2xl rounded-2xl p-6 w-60 sm:w-[400px]">
+                <p className="text-gray-500 text-xl mb-3">{user?.email}</p>
+                <p className="font-semibold text-gray-800 text-3xl mb-4">Hi, {user?.fullname}!</p>
+                <div className="flex justify-center mb-4">
+                  <img src={avatarUrl} className="rounded-full w-[150px]" alt="Profile Avatar" />
+                </div>
+                <div>
+                  <button
                     onClick={handleLogout}
-                    className="px-4 text-sm bg-blue-600 text-white py-2 rounded mr-10 hover:bg-blue-600 "
+                    className="px-4 text-sm bg-blue-600 text-white py-2 rounded mr-10 hover:bg-blue-600"
                   >
                     Logout
                   </button>
-                  <button 
-                      className=" text-sm  py-2  hover:border-b-2 border-blue-700 "
-                      >
-
+                  <button className="text-sm py-2 hover:border-b-2 border-blue-700">
                     Add Another Account
                   </button>
+                </div>
               </div>
-
-              
-            </div>
-          )}
-
+            )}
           </div>
           <button onClick={toggleDarkMode}>
             {darkMode ? <FaSun className="text-yellow-500" /> : <FaMoon className="text-gray-800" />}
@@ -263,45 +170,65 @@ const joinSession = async (sessionCode) => {
         </div>
       </header>
 
-      {menuOpen && (
-        <nav className="sm:hidden bg-gray-200 p-4">
-          <ul className="space-y-3">
-            <li className="text-gray-700">Home</li>
-            <li className="text-gray-700">Features</li>
-            <li className="text-gray-700">Contact</li>
-          </ul>
-        </nav>
-      )}
-
-      <main className="flex-grow flex flex-col sm:flex-row items-center justify-evenly px-4 py-6 gap-8">
-        <section className="text-center sm:text-left max-w-lg sm:m-auto md:m-0">
-          <h1 className="text-2xl sm:text-3xl font-bold">Real-time Whiteboard Collaboration</h1>
+      <main className="flex-grow h-[50vh] md:h-[82.7vh] flex flex-col sm:flex-row items-center justify-evenly px-4 py-6 gap-8">
+        <section className="border-2 border-red-500  text-center sm:text-left max-w-2xl py-10 px-10 sm:m-auto md:m-0">
+          <h1 className="text-2xl sm:text-4xl font-bold">Real-time Whiteboard Collaboration</h1>
           <p className="text-gray-600 mt-3 text-sm sm:text-base">
             Collaborate in real-time on a shared whiteboard, perfect for brainstorming, sketching, or teaching.
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <button className="flex items-center justify-center w-[300px] m-auto text-sm md:m-0 bg-blue-500 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-600" onClick={createSession}>
-              <FaVideo className="mr-2" />
-              Start Whiteboard
-            </button>
-            <div className="flex items-center border rounded-md  w-[300px] m-auto md:m-0">
-              <FaKeyboard className="ml-3 mr-3 text-lg sm:text-xl" />
-              <input
-                type="text"
-                placeholder="Enter code or link"
-                className="flex-grow px-2 py-2 sm:py-3 focus:outline-none"
-                onChange={(e) => setSessionCode(e.target.value)}
-              />
+          </p>            
+            <div className="flex justify-between pt-5">
               <button
-                onClick={() => joinSession(sessionCode)}
-                className="bg-gray-300 px-4 py-3 hover:bg-gray-400"
+                onClick={generateRoomCode}
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 py-2 text-white px-2 rounded-lg hover:opacity-90 shadow-md transition duration-300"
               >
-                Join
+                Generate Room Code
               </button>
-
+              {roomCode && (
+                <div className="flex items-center w-[260px]">
+                <div className="h-full flex items-center text-center mt-2 bg-gray-100 py-2 px-4 rounded-lg border border-gray-300 w-full sm:w-auto">
+                  <p className="text-sm text-gray-700 font-mono">{roomCode}</p>
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(roomCode)}
+                    className="mt-2 h-full bg-green-500 text-white py-1 px-3 rounded-md text-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    Copy
+                  </button>
+                </div>
+              
+              )}
             </div>
+
+
+          <div className="flex space-x-4">
+              <form onSubmit={handleCreateRoom} className="mt-6">
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-teal-600 text-white py-2 px-6 rounded-lg hover:opacity-90 shadow-md transition duration-300"
+                >
+                  Start Whiteboard
+                </button>
+              </form>
+
+              <form onSubmit={handleJoinRoom} className="mt-6 flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 ">
+                <input
+                  type="text"
+                  placeholder="Enter room code"
+                  value={joinRoomCode}
+                  onChange={(e) => setJoinRoomCode(e.target.value)}
+                  className="w-full sm:w-auto py-2 px-4 rounded-lg border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                />
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-6 rounded-lg hover:opacity-90 shadow-md transition duration-300"
+                >
+                  Join Room
+                </button>
+              </form>
           </div>
         </section>
+
+
 
         <section className="max-w-md relative sm:hidden md:block">
           <img
@@ -325,6 +252,7 @@ const joinSession = async (sessionCode) => {
           </button>
         </section>
       </main>
+
 
       <footer className="bg-gray-800 text-white py-4 text-center">
         <p className="text-sm">&copy; 2024 CollabPad. All rights reserved.</p>

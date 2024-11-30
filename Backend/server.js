@@ -1,51 +1,53 @@
 const express = require('express');
 const http = require('http');
-const socketIo = require('socket.io');
+const { Server } = require('socket.io');
 const cors = require('cors');
+
 const app = express();
+app.use(cors());
+
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST'],
+  },
+});
 
-app.use(cors({
-  origin: 'http://localhost:5173',
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type'],
-}));
-
-let sessions = {};
+const rooms = {};
 
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  console.log('New client connected:', socket.id);
 
-  socket.on("joinSession", ({ sessionCode, user }) => {
-    console.log(`${user.name} joined session: ${sessionCode}`);
-    
-    if (!sessions[sessionCode]) {
-      sessions[sessionCode] = { users: [] };
+  socket.on('joinRoom', ({ roomID, name }) => {
+    if (!rooms[roomID]) {
+      rooms[roomID] = [];
     }
-    sessions[sessionCode].users.push({ id: socket.id, name: user.name });
-    io.to(sessionCode).emit("userJoined", { id: socket.id, name: user.name });
-    
-    socket.join(sessionCode);
+
+    const userExists = rooms[roomID].some((user) => user.name === name);
+
+    if (!userExists) {
+      rooms[roomID].push({ id: socket.id, name });
+      socket.join(roomID);
+      io.to(roomID).emit('updateUsers', rooms[roomID].map((user) => user.name));
+    }
   });
 
-  socket.on("whiteboard-update", ({ sessionCode, data }) => {
-    socket.to(sessionCode).emit("whiteboard-update", data);
+  socket.on('drawing', ({ roomID, data }) => {
+    socket.to(roomID).emit('drawing', data);
   });
 
-  socket.on("clear-whiteboard", ({ sessionCode }) => {
-    io.to(sessionCode).emit("whiteboard-update", { clear: true });
+  socket.on('clear', (roomID) => {
+    io.to(roomID).emit('clear');
   });
 
   socket.on('disconnect', () => {
-    for (const sessionCode in sessions) {
-      const userIndex = sessions[sessionCode].users.findIndex(user => user.id === socket.id);
-      if (userIndex !== -1) {
-        sessions[sessionCode].users.splice(userIndex, 1);
-        io.to(sessionCode).emit("userLeft", socket.id);
-      }
+    for (const roomID in rooms) {
+      rooms[roomID] = rooms[roomID].filter((user) => user.id !== socket.id);
+
+      io.to(roomID).emit('updateUsers', rooms[roomID].map((user) => user.name));
     }
-    console.log('User disconnected:', socket.id);
+    console.log('Client disconnected:', socket.id);
   });
 });
 
