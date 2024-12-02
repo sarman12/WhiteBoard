@@ -14,67 +14,91 @@ const io = new Server(server, {
   },
 });
 
-// Room structure
 const rooms = {};
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
-  // When a user joins a room
+  // Handle user joining a room
   socket.on('joinRoom', ({ roomID, name }) => {
-    if (!rooms[roomID]) {
-      rooms[roomID] = { users: [], host: null };
+  if (!rooms[roomID]) {
+    rooms[roomID] = { users: [], hostName: null }; // Track host by name
+  }
+
+  const room = rooms[roomID];
+  const existingUser = room.users.find((user) => user.name === name);
+
+  if (existingUser) {
+    // Reconnect and update socket ID
+    existingUser.id = socket.id;
+  } else {
+    // Add new user
+    room.users.push({ id: socket.id, name });
+
+    if (!room.hostName) {
+      room.hostName = name; // Assign the first user as host
     }
+  }
 
-    const userExists = rooms[roomID].users.some((user) => user.name === name);
+  socket.join(roomID);
 
-    if (!userExists) {
-      rooms[roomID].users.push({ id: socket.id, name });
-      if (!rooms[roomID].host) {
-        rooms[roomID].host = socket.id; // First user becomes the host
-      }
-      socket.join(roomID);
-
-      // Notify users about the updated room status
-      io.to(roomID).emit('updateUsers', {
-        users: rooms[roomID].users.map((user) => user.name),
-        host: rooms[roomID].host,
-      });
-    }
+  io.to(roomID).emit('updateUsers', {
+    users: room.users.map((user) => user.name),
+    host: room.hostName,
   });
+});
 
+
+  // Handle drawing events (only host can emit drawing events)
   socket.on('drawing', ({ roomID, data }) => {
-    socket.to(roomID).emit('drawing', data);
-  });
-
-  socket.on('clear', (roomID) => {
-    if (rooms[roomID] && rooms[roomID].host === socket.id) {
-      io.to(roomID).emit('clear'); // Only the host can clear
+    const room = rooms[roomID];
+    if (room && room.hostName && room.users.find((user) => user.id === socket.id)?.name === room.hostName) {
+      socket.to(roomID).emit('drawing', data);
     } else {
-      socket.emit('notHost'); // Notify non-hosts that they lack permission
+      socket.emit('notAuthorized', { message: 'Only the host can draw.' });
     }
   });
 
-  // When a user disconnects
+  // Handle clear events (only host can emit clear events)
+  socket.on('clear', (roomID) => {
+    const room = rooms[roomID];
+    if (room && room.hostName && room.users.find((user) => user.id === socket.id)?.name === room.hostName) {
+      io.to(roomID).emit('clear');
+    } else {
+      socket.emit('notAuthorized', { message: 'Only the host can clear the board.' });
+    }
+  });
+
+  // Handle user disconnecting
   socket.on('disconnect', () => {
     for (const roomID in rooms) {
       const room = rooms[roomID];
-      room.users = room.users.filter((user) => user.id !== socket.id);
+      const userIndex = room.users.findIndex((user) => user.id === socket.id);
 
-      // If the host disconnects, assign a new host
-      if (room.host === socket.id) {
-        room.host = room.users[0]?.id || null; // Assign new host or set to null
-      }
+      if (userIndex !== -1) {
+        const user = room.users[userIndex];
 
-      // Notify users about the updated room status
-      io.to(roomID).emit('updateUsers', {
-        users: room.users.map((user) => user.name),
-        host: room.host,
-      });
+        // Remove user from the room
+        room.users.splice(userIndex, 1);
 
-      // Remove empty rooms
-      if (room.users.length === 0) {
-        delete rooms[roomID];
+        // Only reassign host if the actual host leaves permanently
+        if (room.hostName === user.name) {
+          if (room.users.length > 0) {
+            room.hostName = room.users[0].name; // Reassign to the next user
+          } else {
+            room.hostName = null;
+          }
+        }
+
+        io.to(roomID).emit('updateUsers', {
+          users: room.users.map((user) => user.name),
+          host: room.hostName,
+        });
+
+        // Clean up empty rooms
+        if (room.users.length === 0) {
+          delete rooms[roomID];
+        }
       }
     }
   });

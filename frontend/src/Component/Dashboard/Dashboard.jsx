@@ -6,22 +6,18 @@ import {
   FaArrowLeft,
   FaArrowRight,
   FaCog,
-  FaSun,
-  FaMoon,
 } from "react-icons/fa";
 import col from "../../assets/collaboration.png";
 import chat from "../../assets/chat.png";
 import video from "../../assets/videocall.png";
-const socket = io("http://localhost:5000");
 
+const socket = io("http://localhost:5000");
 
 function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state } = location || {};
   const { user } = state || {};
-  const [darkMode, setDarkMode] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [roomCode, setRoomCode] = useState("");
   const [joinRoomCode, setJoinRoomCode] = useState("");
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -36,7 +32,7 @@ function Dashboard() {
 
   const generateRoomCode = () => {
     const randomString = Math.random().toString(36).substring(2, 15).toUpperCase();
-    const formattedCode = randomString.match(/.{1,4}/g).join('-');
+    const formattedCode = randomString.match(/.{1,4}/g).join("-");
     setRoomCode(formattedCode);
   };
 
@@ -44,19 +40,22 @@ function Dashboard() {
     e.preventDefault();
     if (user.fullname && roomCode) {
       socket.emit("joinRoom", { roomID: roomCode, name: user.fullname });
-      navigate(`/whiteboard/${roomCode}?name=${user.fullname}`);
+      navigate(`/whiteboard/${roomCode}?name=${user.fullname}&isHost=true`);
     }
   };
+  
 
   const handleJoinRoom = (e) => {
     e.preventDefault();
-    if (user.fullname && joinRoomCode) {
+    if (!joinRoomCode.match(/^[A-Z0-9\-]+$/)) {
+      alert("Invalid room code format. Please check and try again.");
+      return;
+    }
+    if (user?.fullname && joinRoomCode) {
       socket.emit("joinRoom", { roomID: joinRoomCode, name: user.fullname });
       navigate(`/whiteboard/${joinRoomCode}?name=${user.fullname}`);
     }
   };
-
-  const toggleDarkMode = () => setDarkMode(!darkMode);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -74,8 +73,7 @@ function Dashboard() {
   const slides = [
     {
       title: "Welcome to the Whiteboard",
-      description:
-        "Join the whiteboard to collaborate, sketch, and communicate with your team in real-time.",
+      description: "Join the whiteboard to collaborate, sketch, and communicate with your team in real-time.",
       image: col,
     },
     {
@@ -115,7 +113,7 @@ function Dashboard() {
   const avatarUrl = `https://ui-avatars.com/api/?name=${initials}&background=random&color=fff`;
 
   return (
-    <div className={`min-h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-black"}`}>
+    <div className="min-h-screen bg-gray-100 text-black">
       <header className="sticky top-0 z-50 px-16 py-3 flex items-center justify-between bg-white shadow-md">
         <div className="flex items-center gap-3">
           <img src={logo} className="w-10 h-10 rounded-full" alt="Logo" />
@@ -160,71 +158,64 @@ function Dashboard() {
               </div>
             )}
           </div>
-          <button onClick={toggleDarkMode}>
-            {darkMode ? <FaSun className="text-yellow-500" /> : <FaMoon className="text-gray-800" />}
-          </button>
         </div>
       </header>
 
       <main className="flex-grow h-[50vh] md:h-[82.7vh] flex flex-col sm:flex-row items-center justify-evenly px-4 py-6 gap-8">
-        <section className="  text-center sm:text-left max-w-2xl py-10 px-10 sm:m-auto md:m-0">
+        <section className="text-center sm:text-left max-w-2xl py-10 px-10 sm:m-auto md:m-0">
           <h1 className="text-2xl sm:text-4xl font-bold">Real-time Whiteboard Collaboration</h1>
           <p className="text-gray-600 mt-3 text-sm sm:text-base">
             Collaborate in real-time on a shared whiteboard, perfect for brainstorming, sketching, or teaching.
-          </p>            
-            <div className="flex justify-between pt-5">
-              <button
-                onClick={generateRoomCode}
-                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 py-2 text-white px-2 rounded-lg hover:opacity-90 shadow-md transition duration-300"
-              >
-                Generate Room Code
-              </button>
-              {roomCode && (
-                <div className="flex items-center w-[260px]">
+          </p>
+          <div className="flex justify-between pt-5">
+            <button
+              onClick={generateRoomCode}
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 py-2 text-white px-2 rounded-lg hover:opacity-90 shadow-md transition duration-300"
+            >
+              Generate Room Code
+            </button>
+            {roomCode && (
+              <div className="flex items-center w-[260px]">
                 <div className="h-full flex items-center text-center mt-2 bg-gray-100 py-2 px-4 rounded-lg border border-gray-300 w-full sm:w-auto">
                   <p className="text-sm text-gray-700 font-mono">{roomCode}</p>
-                  </div>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(roomCode)}
-                    className="mt-2 h-full bg-green-500 text-white py-1 px-3 rounded-md text-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    Copy
-                  </button>
                 </div>
-              
-              )}
-            </div>
-
+                <button
+                  onClick={() => navigator.clipboard.writeText(roomCode)}
+                  className="mt-2 h-full bg-green-500 text-white py-1 px-3 rounded-md text-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  Copy
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="flex space-x-4">
-              <form onSubmit={handleCreateRoom} className="mt-6">
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-teal-600 text-white py-2 px-6 rounded-lg hover:opacity-90 shadow-md transition duration-300"
-                >
-                  Start Whiteboard
-                </button>
-              </form>
+            <form className="mt-6">
+              <button
+                type="submit"
+                className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-teal-600 text-white py-2 px-6 rounded-lg hover:opacity-90 shadow-md transition duration-300"
+              onClick={handleCreateRoom}>
+                Start Whiteboard
+              </button>
+            </form>
 
-              <form onSubmit={handleJoinRoom} className="mt-6 flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 ">
-                <input
-                  type="text"
-                  placeholder="Enter room code"
-                  value={joinRoomCode}
-                  onChange={(e) => setJoinRoomCode(e.target.value)}
-                  className="w-full sm:w-auto py-2 px-4 rounded-lg border border-gray-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                />
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-6 rounded-lg hover:opacity-90 shadow-md transition duration-300"
-                >
-                  Join Room
-                </button>
-              </form>
+            <form onSubmit={handleJoinRoom} className="mt-6 flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0">
+              <input
+                type="text"
+                value={joinRoomCode}
+                onChange={(e) => setJoinRoomCode(e.target.value)}
+                placeholder="Enter Room Code"
+                className="w-full sm:w-auto py-2 px-4 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="submit"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-6 rounded-lg hover:opacity-90 shadow-md transition duration-300"
+              >
+                Join Whiteboard
+              </button>
+            </form>
           </div>
         </section>
-
-
 
         <section className="max-w-md relative sm:hidden md:block">
           <img
@@ -232,8 +223,8 @@ function Dashboard() {
             alt="Slide"
             className="w-48 sm:w-64 mx-auto rounded-full object-cover border-2 border-gray-300"
           />
-          <h2 className="text-lg sm:text-xl font-semibold mt-3">{slides[currentSlide].title}</h2>
-          <p className="text-gray-600 text-sm sm:text-base">{slides[currentSlide].description}</p>
+          <h2 className="text-lg text-center sm:text-xl font-semibold mt-3">{slides[currentSlide].title}</h2>
+          <p className="  text-center text-gray-600 text-sm sm:text-base">{slides[currentSlide].description}</p>
           <button
             onClick={handlePrev}
             className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-200 p-2 rounded-full hover:bg-gray-300"
@@ -248,11 +239,6 @@ function Dashboard() {
           </button>
         </section>
       </main>
-
-
-      <footer className="bg-gray-800 text-white py-4 text-center">
-        <p className="text-sm">&copy; 2024 CollabPad. All rights reserved.</p>
-      </footer>
     </div>
   );
 }

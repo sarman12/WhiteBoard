@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { FaCog, FaQuestion, FaShare, FaCircle, FaTrash, FaPen, FaBrush, FaHighlighter, FaEraser, FaUndo, FaRedo, FaSave } from 'react-icons/fa';
-import { MdRectangle } from 'react-icons/md';
+import { FaTrash, FaBrush, FaEraser, FaDownload } from 'react-icons/fa';
 
 const socket = io('http://localhost:5000');
 
@@ -15,11 +14,11 @@ function Whiteboard() {
   const [isDrawing, setIsDrawing] = useState(false);
   const [brushColor, setBrushColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
+  const [isErasing, setIsErasing] = useState(false);
+  const [shape, setShape] = useState('free');
   const [usersInRoom, setUsersInRoom] = useState([]);
-  const [hostID, setHostID] = useState(null);
-  const [showProfile, setShowProfile] = useState(null);
-  const [drawingHistory, setDrawingHistory] = useState([]);
-  const [redoHistory, setRedoHistory] = useState([]);
+  const [hostName, setHostName] = useState(null);
+  const [startPos, setStartPos] = useState(null);
 
   useEffect(() => {
     if (roomID && name) {
@@ -28,7 +27,7 @@ function Whiteboard() {
 
     socket.on('updateUsers', ({ users, host }) => {
       setUsersInRoom(users);
-      setHostID(host);
+      setHostName(host);
     });
 
     return () => {
@@ -38,24 +37,34 @@ function Whiteboard() {
 
   const initializeCanvas = () => {
     const canvas = canvasRef.current;
-    canvas.width = window.innerWidth * 0.8;
-    canvas.height = window.innerHeight * 0.8;
-    canvas.style.border = '1px solid black';
-
     const context = canvas.getContext('2d');
+    canvas.width = window.innerWidth * 0.75;
+    canvas.height = window.innerHeight * 0.77;
+    canvas.style.backgroundColor = '#f0f0f0';
+    canvas.style.borderRadius='20px'
+    canvas.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.2)';
+
+
     context.lineCap = 'round';
     context.strokeStyle = brushColor;
     context.lineWidth = brushSize;
+
     contextRef.current = context;
   };
 
   useEffect(() => {
     initializeCanvas();
 
-    socket.on('drawing', ({ x, y, color, size }) => {
+    socket.on('drawing', ({ x, y, color, size, tool }) => {
       const context = contextRef.current;
       if (context) {
-        context.strokeStyle = color;
+        if (tool === 'eraser') {
+          context.globalCompositeOperation = 'destination-out';
+          context.strokeStyle = 'rgba(0,0,0,1)';
+        } else {
+          context.globalCompositeOperation = 'source-over';
+          context.strokeStyle = color;
+        }
         context.lineWidth = size;
         context.lineTo(x, y);
         context.stroke();
@@ -68,9 +77,14 @@ function Whiteboard() {
       contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     });
 
+    socket.on('notAuthorized', ({ message }) => {
+      alert(message);
+    });
+
     return () => {
       socket.off('drawing');
       socket.off('clear');
+      socket.off('notAuthorized');
     };
   }, []);
 
@@ -82,181 +96,175 @@ function Whiteboard() {
   }, [brushColor, brushSize]);
 
   const startDrawing = ({ nativeEvent }) => {
+    if (name !== hostName) return;
     const { offsetX, offsetY } = nativeEvent;
     contextRef.current.beginPath();
     contextRef.current.moveTo(offsetX, offsetY);
+    setStartPos({ x: offsetX, y: offsetY });
     setIsDrawing(true);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = ({ nativeEvent }) => {
     if (!isDrawing) return;
+    if (shape !== 'free') {
+      const { offsetX, offsetY } = nativeEvent;
+      const context = contextRef.current;
+      if (shape === 'rectangle') {
+        context.strokeRect(startPos.x, startPos.y, offsetX - startPos.x, offsetY - startPos.y);
+      } else if (shape === 'circle') {
+        const radius = Math.sqrt(Math.pow(offsetX - startPos.x, 2) + Math.pow(offsetY - startPos.y, 2));
+        context.beginPath();
+        context.arc(startPos.x, startPos.y, radius, 0, 2 * Math.PI);
+        context.stroke();
+      }
+    }
     contextRef.current.closePath();
     setIsDrawing(false);
-
-    const canvas = canvasRef.current;
-    setDrawingHistory((prev) => [...prev, canvas.toDataURL()]);
-    setRedoHistory([]);
   };
 
   const draw = ({ nativeEvent }) => {
-    if (!isDrawing) return;
+  if (!isDrawing || shape !== 'free') return;
 
-    const { offsetX, offsetY } = nativeEvent;
-    contextRef.current.lineTo(offsetX, offsetY);
-    contextRef.current.stroke();
+  const { offsetX, offsetY } = nativeEvent;
+  const context = contextRef.current;
 
-    socket.emit('drawing', {
-      roomID,
-      data: { x: offsetX, y: offsetY, color: brushColor, size: brushSize },
-    });
-  };
+  context.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
+  context.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : brushColor;
+  context.lineWidth = brushSize;
+
+  context.lineTo(offsetX, offsetY);
+  context.stroke();
+
+  socket.emit('drawing', {
+    roomID,
+    data: { x: offsetX, y: offsetY, color: brushColor, size: brushSize, tool: isErasing ? 'eraser' : 'brush' },
+  });
+};
 
   const clearCanvas = () => {
+    if (name !== hostName) {
+      alert('Only the host can clear the canvas.');
+      return;
+    }
     contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     socket.emit('clear', roomID);
   };
 
-  const undoLast = () => {
-    if (drawingHistory.length === 0) return;
-    const previousState = drawingHistory.pop();
-    setRedoHistory((prev) => [...prev, previousState]);
-
-    const img = new Image();
-    img.src = drawingHistory[drawingHistory.length - 1] || '';
-    img.onload = () => {
-      contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      contextRef.current.drawImage(img, 0, 0);
-    };
-  };
-
-  const redoLast = () => {
-    if (redoHistory.length === 0) return;
-    const nextState = redoHistory.pop();
-    setDrawingHistory((prev) => [...prev, nextState]);
-
-    const img = new Image();
-    img.src = nextState;
-    img.onload = () => {
-      contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      contextRef.current.drawImage(img, 0, 0);
-    };
-  };
-
-  const saveCanvas = () => {
+  const downloadCanvas = () => {
     const canvas = canvasRef.current;
     const link = document.createElement('a');
-    link.download = 'whiteboard.png';
+    link.download = 'collabpad.png';
     link.href = canvas.toDataURL();
     link.click();
   };
 
-  const getInitials = (name) =>
-    name
-      ? name
-          .split(' ')
-          .map((n) => n.charAt(0).toUpperCase())
-          .join('')
-      : 'U';
-
-  const handleShowProfile = (user) => {
-    setShowProfile(user === showProfile ? null : user);
-  };
-
   return (
-    <div className="bg-white flex flex-col items-center">
+    <div className="fixed top-0 bottom-0 w-full bg-white flex flex-col items-center">
       <nav className="p-2 px-5 bg-slate-200 w-full flex justify-between items-center">
+        <h1 className="text-xl font-bold">CollabPad</h1>
+        <span className="bg-blue-500 text-white px-3 py-1 rounded">
+          Session Code: {roomID}
+        </span>
         <div>
-          <img
-            src="https://via.placeholder.com/50"
-            alt="Logo"
-            className="w-12 h-12 rounded-full border border-white"
-          />
-        </div>
 
-        <div className="flex items-center space-x-3">
-          <h1 className="text-xl font-bold">CollabPad</h1>
-          <span className="bg-blue-500 text-white px-3 py-1 rounded">
-            Session Code: {roomID}
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <ul className="flex space-x-6 items-center">
-            <li className="cursor-pointer hover:text-gray-400 transition">
-              <FaCog className="text-2xl" title="Settings" />
-            </li>
-            <li className="cursor-pointer hover:text-gray-400 transition">
-              <FaQuestion className="text-2xl" title="Help" />
-            </li>
-            <li className="cursor-pointer hover:text-gray-400 transition">
-              <FaShare className="text-2xl" title="Share" />
-            </li>
-          </ul>
         </div>
       </nav>
 
-      <div className="flex h-[91vh] flex-row-reverse p-3">
+      <div className="flex h-[95vh] flex-row-reverse p-3">
         <div className="bg-white p-4">
-          <h2 className="text-lg font-bold mb-4">Users in Room:</h2>
-          <ul className="flex flex-wrap gap-4">
+          <h2 className="text-lg font-bold mb-2">Users in Room:</h2>
+          <ul className="flex flex-col flex-wrap gap-2">
             {usersInRoom.map((user) => (
-              <li key={user.id} className="relative group">
-                <img
-                  src={`https://ui-avatars.com/api/?name=${getInitials(user)}&background=random&color=fff`}
-                  alt="Avatar"
-                  className="rounded-full w-12 h-12 cursor-pointer hover:shadow-lg"
-                  onClick={() => handleShowProfile(user)}
-                />
-                {hostID === user && (
-                  <span className="absolute top-0 right-0 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                    Leader
-                  </span>
-                )}
-                {showProfile === user && (
-                  <div className="absolute top-16 right-0 w-auto bg-white border rounded-lg shadow-2xl p-4">
-                    <h3 className="font-bold text-lg mb-2">{user}</h3>
-                  </div>
-                )}
+              <li key={user}>
+                <span>
+                  {user} {user === hostName && <span className="ml-2 text-green-500">(Host)</span>}
+                </span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="flex py-5 px-2">
-          <div className="toolbar flex flex-col space-y-3 items-center my-0">
-            <button onClick={clearCanvas} className="bg-red-500 text-white py-2 px-4 rounded mx-2">
-              <FaTrash />
-            </button>
-            <button onClick={() => setTool('brush')} className="bg-gray-500 text-white py-2 px-4 rounded mx-2">
-              <FaBrush />
-            </button>
-            <button onClick={() => setTool('eraser')} className="bg-gray-500 text-white py-2 px-4 rounded mx-2">
-              <FaEraser />
-            </button>
-            <button onClick={() => drawShape('rectangle')} className="bg-gray-500 text-white py-2 px-4 rounded mx-2">
-              <MdRectangle/>
-            </button>
-            <button onClick={() => drawShape('circle')} className="bg-gray-500 text-white py-2 px-4 rounded mx-2">
-              <FaCircle/>
-            </button>
-            <button onClick={undoLast} className="bg-gray-500 text-white py-2 px-4 rounded mx-2">
-              <FaUndo />
-            </button>
-            <button onClick={redoLast} className="bg-gray-500 text-white py-2 px-4 rounded mx-2">
-              <FaRedo />
-            </button>
-            <button onClick={saveCanvas} className="bg-green-500 text-white py-2 px-4 rounded mx-2">
-              <FaSave />
-            </button>
-          </div>
+        <div className="flex flex-col-reverse border-2 rounded-2xl  shadow-2xl  py-5 px-2">
+          <div className="shadow-xl border-2 mx-auto mb-[-10px] bg-gray-100 p-2 flex space-x-4 items-center rounded-lg">
+  <button
+    onClick={clearCanvas}
+    disabled={name !== hostName}
+    className={`p-3 rounded-full ${
+      name === hostName
+        ? 'bg-red-500 hover:bg-red-600 text-white transition duration-200'
+        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+    }`}
+    title="Clear Canvas"
+  >
+    <FaTrash className="text-lg" />
+  </button>
 
-          <canvas
-          className='bg-white h-[80vh]'
-            ref={canvasRef}
-            onMouseDown={startDrawing}
-            onMouseUp={stopDrawing}
-            onMouseMove={draw}
-          />
+  <button
+    onClick={() => setIsErasing(false)}
+    className={`p-3 rounded-full ${
+      !isErasing
+        ? 'bg-green-500 text-white hover:bg-green-600'
+        : 'bg-gray-500 text-white hover:bg-gray-600'
+    } transition duration-200`}
+    title="Brush"
+  >
+    <FaBrush className="text-lg" />
+  </button>
+
+  <button
+    onClick={() => setIsErasing(true)}
+    className={`p-3 rounded-full ${
+      isErasing
+        ? 'bg-gray-700 text-white hover:bg-gray-800'
+        : 'bg-gray-500 text-white hover:bg-gray-600'
+    } transition duration-200`}
+    title="Eraser"
+  >
+    <FaEraser className="text-lg" />
+  </button>
+
+  <div className="flex flex-col items-center space-y-1">
+    <label className="text-sm text-gray-600">Color</label>
+    <input
+      type="color"
+      value={brushColor}
+      onChange={(e) => setBrushColor(e.target.value)}
+      className="p-1 w-8 h-8 rounded-full border-2 border-gray-300 cursor-pointer"
+    />
+  </div>
+
+  <div className="flex flex-col items-center space-y-1">
+    <label className="text-sm text-gray-600">Brush</label>
+    <input
+      type="range"
+      min="1"
+      max="50"
+      value={brushSize}
+      onChange={(e) => setBrushSize(Number(e.target.value))}
+      className="w-24 cursor-pointer"
+    />
+  </div>
+
+  <button
+    onClick={downloadCanvas}
+    className="p-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition duration-200"
+    title="Download Canvas"
+  >
+    <FaDownload className="text-lg" />
+  </button>
+</div>
+
+
+          
+          <main className="p-2">
+            <canvas
+              className=""
+              ref={canvasRef}
+              onMouseDown={startDrawing}
+              onMouseUp={stopDrawing}
+              onMouseMove={draw}
+            />
+          </main>
         </div>
       </div>
     </div>
