@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import '../../index.css';
-import RegisterLogo from '../../assets/register.jpg';
 import { useNavigate } from 'react-router';
 import { FaGoogle, FaFacebook } from 'react-icons/fa';
 import axios from 'axios';
@@ -42,10 +41,9 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-800 to-pink-900 flex items-center justify-center relative">
+    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-800 to-pink-900 flex items-center justify-center fixed left-0 right-0">
       <div
         className="absolute inset-0 bg-cover bg-center opacity-40"
-        style={{ backgroundImage: `url(${RegisterLogo})` }}
       ></div>
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
 

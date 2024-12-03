@@ -1,7 +1,23 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { FaTrash, FaBrush,FaPen, FaEraser, FaDownload, FaUndo, FaRedo, FaTh } from 'react-icons/fa';
+import {
+  FaTrash,
+  FaBrush,
+  FaPen,
+  FaStickyNote,
+  FaTextHeight,
+  FaEraser,
+  FaDownload,
+  FaUndo,
+  FaRedo,
+  FaTh,
+  FaEllipsisV,
+  FaTimes,
+  FaSnapchat
+} from 'react-icons/fa';
+import { BsChatDots } from 'react-icons/bs';
+import ChatInterface from './ChatInterface';
 
 const socket = io('http://localhost:5000');
 
@@ -15,11 +31,17 @@ function Whiteboard() {
   const [brushColor, setBrushColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
   const [isErasing, setIsErasing] = useState(false);
+  const [isHighlighting, setIsHighlighting] = useState(false);
   const [usersInRoom, setUsersInRoom] = useState([]);
   const [hostName, setHostName] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
   const [showGrid, setShowGrid] = useState(false);
+  const [stickyNotes, setStickyNotes] = useState([]);
+  const [noteText, setNoteText] = useState('');
+  const [textTool, setTextTool] = useState(false);
+  const [seeMore,setSeeMore] = useState(false);
+  const [chat,setChat] = useState(false);
 
   useEffect(() => {
     if (roomID && name) {
@@ -43,7 +65,6 @@ function Whiteboard() {
     canvas.height = window.innerHeight * 0.77;
     canvas.style.backgroundColor = '#f0f0f0';
     context.lineCap = 'round';
-
     contextRef.current = context;
 
     socket.on('startDrawing', ({ x, y }) => {
@@ -52,15 +73,14 @@ function Whiteboard() {
     });
 
     socket.on('drawing', ({ x, y, color, size, tool }) => {
-      if (context) {
-        context.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
-        context.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : color;
-        context.lineWidth = size;
-        context.lineTo(x, y);
-        context.stroke();
-        context.beginPath();
-        context.moveTo(x, y);
-      }
+      context.globalCompositeOperation =
+        tool === 'eraser' ? 'destination-out' : 'source-over';
+      context.strokeStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : color;
+      context.lineWidth = size;
+      context.lineTo(x, y);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(x, y);
     });
 
     socket.on('stopDrawing', () => {
@@ -71,8 +91,17 @@ function Whiteboard() {
       context.clearRect(0, 0, canvas.width, canvas.height);
     });
 
-    socket.on('notAuthorized', ({ message }) => {
-      alert(message);
+    socket.on('chatMessage', (message) => {
+      setChatMessages((prev) => [...prev, message]);
+    });
+
+    socket.on('importImage', ({ imageData }) => {
+      const img = new Image();
+      img.onload = () => {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(img, 0, 0);
+      };
+      img.src = imageData;
     });
 
     return () => {
@@ -80,7 +109,8 @@ function Whiteboard() {
       socket.off('drawing');
       socket.off('stopDrawing');
       socket.off('clear');
-      socket.off('notAuthorized');
+      socket.off('chatMessage');
+      socket.off('importImage');
     };
   }, []);
 
@@ -134,105 +164,65 @@ function Whiteboard() {
     socket.emit('stopDrawing', roomID);
   };
 
-  const [isHighlighting, setIsHighlighting] = useState(false);
-
-  useEffect(() => {
-  socket.on('importImage', ({ imageData }) => {
-    const img = new Image();
+  const draw = ({ nativeEvent }) => {
+    if (!isDrawing) return;
+    const { offsetX, offsetY } = nativeEvent;
     const context = contextRef.current;
-
-    img.onload = () => {
-      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      context.drawImage(img, 0, 0);
-    };
-
-    img.src = imageData;
-  });
-
-  return () => {
-    socket.off('importImage');
-  };
-}, []);
-
-
-const draw = ({ nativeEvent }) => {
-  if (!isDrawing) return;
-  const { offsetX, offsetY } = nativeEvent;
-  const context = contextRef.current;
-
-  context.globalCompositeOperation = isErasing ? 'destination-out' : 'source-over';
-  context.globalAlpha = isHighlighting ? 0.3 : 1;
-  context.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : brushColor;
-  context.lineWidth = brushSize;
-  context.lineTo(offsetX, offsetY);
-  context.stroke();
-  context.beginPath();
-  context.moveTo(offsetX, offsetY);
-
-  socket.emit('drawing', {
-    roomID,
-    data: {
-      x: offsetX,
-      y: offsetY,
-      color: brushColor,
-      size: brushSize,
-      tool: isErasing ? 'eraser' : isHighlighting ? 'highlighter' : 'brush',
-    },
-  });
-
-  context.globalAlpha = 1;
-};
-
-const importImage = (event) => {
-  const file = event.target.files[0];
-  if (file) {
-    const img = new Image();
-    const context = contextRef.current;
-
-    img.onload = () => {
-      context.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      canvasRef.current.width = img.width;
-      canvasRef.current.height = img.height;
-      context.drawImage(img, 0, 0);
-
-      const imageData = canvasRef.current.toDataURL();
-      socket.emit('importImage', { roomID, imageData });
-    };
-
-    img.src = URL.createObjectURL(file);
-  }
-};
-
-
-
-
-  const toggleGrid = () => {
-    setShowGrid((prev) => !prev);
+    context.globalCompositeOperation = isErasing
+      ? 'destination-out'
+      : 'source-over';
+    context.globalAlpha = isHighlighting ? 0.3 : 1;
+    context.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : brushColor;
+    context.lineWidth = brushSize;
+    context.lineTo(offsetX, offsetY);
+    context.stroke();
+    context.beginPath();
+    context.moveTo(offsetX, offsetY);
+    socket.emit('drawing', {
+      roomID,
+      data: {
+        x: offsetX,
+        y: offsetY,
+        color: brushColor,
+        size: brushSize,
+        tool: isErasing ? 'eraser' : isHighlighting ? 'highlighter' : 'brush',
+      },
+    });
+    context.globalAlpha = 1;
   };
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    if (showGrid) {
-      for (let x = 0; x < canvas.width; x += 50) {
-        for (let y = 0; y < canvas.height; y += 50) {
-          context.beginPath();
-          context.strokeStyle = '#e0e0e0';
-          context.rect(x, y, 50, 50);
-          context.stroke();
-        }
-      }
-    } else {
-      context.clearRect(0, 0, canvas.width, canvas.height);
+  const importImage = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const img = new Image();
+      img.onload = () => {
+        contextRef.current.clearRect(
+          0,
+          0,
+          canvasRef.current.width,
+          canvasRef.current.height
+        );
+        contextRef.current.drawImage(img, 0, 0);
+        socket.emit('importImage', {
+          roomID,
+          imageData: canvasRef.current.toDataURL(),
+        });
+      };
+      img.src = URL.createObjectURL(file);
     }
-  }, [showGrid]);
+  };
 
   const clearCanvas = () => {
     if (name !== hostName) {
       alert('Only the host can clear the canvas.');
       return;
     }
-    contextRef.current.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    contextRef.current.clearRect(
+      0,
+      0,
+      canvasRef.current.width,
+      canvasRef.current.height
+    );
     socket.emit('clear', roomID);
   };
 
@@ -244,12 +234,56 @@ const importImage = (event) => {
     link.click();
   };
 
+  const toggleGrid = () => {
+    setShowGrid((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    if (showGrid) {
+      for (let x = 0; x < canvas.width; x += 50) {
+        for (let y = 0; y < canvas.height; y += 50) {
+          context.beginPath();
+          context.strokeStyle = '#e0e0e0';
+          context.rect(x, y, 50, 50);
+          context.stroke();
+        }
+      }
+    }
+  }, [showGrid]);
+
+  const handleAddStickyNote = () => {
+    if (noteText.trim()) {
+      const newNote = {
+        id: Date.now(),
+        text: noteText,
+        x: Math.random() * 200 + 50,
+        y: Math.random() * 200 + 50,
+      };
+      setStickyNotes((prev) => [...prev, newNote]);
+      setNoteText('');
+    }
+  };
+  
+
+
   return (
     <div className="fixed top-0 bottom-0 w-full bg-white flex flex-col items-center">
       <nav className="p-2 px-5 bg-slate-200 w-full flex justify-between items-center">
         <h1 className="text-xl font-bold">CollabPad</h1>
-        <span className="bg-blue-500 text-white px-3 py-1 rounded">
-          Session Code: {roomID}
+        <span className="bg-blue-500 text- px-3 py-1 rounded flex font-extrabold text-[17px] items-center gap-4">
+          Session Code -{`>`} <p className="text-white font-bold tracking-wide">{roomID}</p>
+          <button
+              title="see more"
+              className="bg-black p-2 mx-4 text-white rounded-full"
+              onClick={() => {
+                setSeeMore(!seeMore);
+              }}
+            >
+              <FaEllipsisV />
+            </button>
         </span>
         <div>
 
@@ -257,20 +291,60 @@ const importImage = (event) => {
       </nav>
 
       <div className="flex h-[95vh] flex-row-reverse p-3">
-        <div className="bg-white p-4">
-          <h2 className="text-lg font-bold mb-2">Users in Room:</h2>
-          <ul className="flex flex-col flex-wrap gap-2">
-            {usersInRoom.map((user) => (
-              <li key={user}>
-                <span>
-                  {user} {user === hostName && <span className="ml-2 text-green-500">(Host)</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
+        <div className="bg-white">
+            
+            {seeMore && (
+              <div className="fixed p-4 w-[80vw] h-[80vh] top-[10vh] left-[10vw] z-30 bg-black/80 backdrop-blur-md rounded-2xl shadow-lg">
+                
+                <h2 className="text-xl font-bold text-white mb-4 text-center">Users in Room</h2>
+                <ul className="flex gap-4 overflow-y-auto max-h-[70vh] px-4">
+                  {usersInRoom.map((user) => (
+                    <li
+                      key={user}
+                      className="flex items-center gap-4 bg-white/10 p-3 rounded-lg shadow-2xl"
+                    >
+                      <div className="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg">
+                        {user.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-white font-medium text-lg">
+                        {user}
+                        {user === hostName && (
+                          <span className="ml-2 text-green-500 text-sm">(Host)</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+          {!chat && (
+            <button
+              onClick={() => setChat(true)}
+              className="fixed bottom-4 right-4 p-4 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 transition"
+            >
+              <BsChatDots className="text-2xl" />
+            </button>
+          )}
+
+          {chat && (
+          <div className="h-full flex flex-col">
+              <div className="p-2 border-b bg-blue-500 text-white font-bold flex justify-between items-center">
+                <h2>Chat</h2>
+                <button
+                  onClick={() => setChat(false)}
+                  className="p-2 rounded-full bg-red-500 hover:bg-red-600 transition"
+                >
+                  Close
+                </button>
+              </div>
+                <ChatInterface />
+          </div>
+          )}
+
         </div>
 
-        <div className="flex flex-col-reverse border-2 rounded-2xl  shadow-2xl  py-5 px-2">
+        <div className="flex flex-col-reverse border-2 bg-blue-500  shadow-2xl  py-5 px-2">
           <div className="shadow-xl border-2 mx-auto mb-[-10px] bg-gray-100 p-2 flex space-x-4 items-center rounded-lg">
               <button
                 onClick={clearCanvas}
@@ -299,17 +373,18 @@ const importImage = (event) => {
                 <FaBrush className="text-lg" />
               </button>
 
-              <button
-                onClick={() => setIsErasing(false)}
-                className={`p-3 rounded-full ${
-                  !isErasing
+              <button onClick={() => setTextTool(!textTool)}>
+                <FaTextHeight />
+              </button>
+              <button onClick={handleAddStickyNote}>
+                <FaStickyNote />
+              </button>
+
+
+              <button onClick={() => setIsErasing(false)} className={`p-3 rounded-full ${ !isErasing
                     ? 'bg-green-500 text-white hover:bg-green-600'
                     : 'bg-gray-500 text-white hover:bg-gray-600'
-                } transition duration-200`}
-                title="Brush"
-              >
-                <FaPen className="text-lg" />
-              </button>
+                } transition duration-200`} title="Brush"> <FaPen className="text-lg" /> </button>
 
               <input
                 type="file"
@@ -326,6 +401,16 @@ const importImage = (event) => {
               >
                 <FaDownload className="text-lg" />
             </label>
+            {stickyNotes.map((note) => (
+              <div
+                key={note.id}
+                className="sticky-note"
+                style={{ top: note.y, left: note.x }}
+              >
+                {note.text}
+              </div>
+            ))}
+
 
 
               <button

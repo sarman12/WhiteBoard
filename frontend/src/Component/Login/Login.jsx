@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import "../../index.css";
-import LoginLogo from "../../assets/login.jpg";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import { useNavigate } from "react-router";
 import axios from 'axios'
@@ -52,10 +51,9 @@ setTimeout(() => navigate('/dashboard', { state: { user } }), 2000);
 
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800 relative">
+    <div className="fixed left-0 right-0 min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-800 ">
       <div
         className="absolute inset-0 bg-cover bg-center opacity-80"
-        style={{ backgroundImage: `url(${LoginLogo})` }}
       ></div>
 
       <div className="relative z-10 w-full max-w-md bg-black bg-opacity-70 p-8 rounded-2xl shadow-xl backdrop-blur-sm">
