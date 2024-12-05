@@ -4,9 +4,8 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { nanoid } = require("nanoid");
-const http = require("http");
-const { Server } = require("socket.io");
+const nodemailer = require("nodemailer");
+require("dotenv").config();
 
 const app = express();
 const port = 3000;
@@ -14,9 +13,15 @@ const port = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
+
+
+// Instead of using the nodemailer we should use sendgrid email seervic
+
+
 const sequelize = new Sequelize({
   dialect: "sqlite",
-  storage: "./whiteboard.sqlite",
+  storage: "./Database.sqlite",
+  logging: console.log, 
 });
 
 const User = sequelize.define("user", {
@@ -28,25 +33,28 @@ const User = sequelize.define("user", {
   fullname: { type: Sequelize.STRING, allowNull: false },
   email: { type: Sequelize.STRING, unique: true, allowNull: false },
   password: { type: Sequelize.STRING, allowNull: false },
+  otp: { type: Sequelize.STRING },
 });
 
-const WhiteboardSession = sequelize.define("whiteboardSession", {
-  id: {
-    type: Sequelize.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+(async () => {
+  try {
+    await sequelize.sync({ force: true });
+    console.log("Database synced successfully.");
+  } catch (err) {
+    console.error("Error syncing database:", err);
+  }
+})();
+
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SENDER_EMAIL,
+    pass: process.env.SENDER_EMAIL_PASSWORD,
   },
-  sessionCode: { type: Sequelize.STRING, unique: true, allowNull: false },
-  createdBy: { type: Sequelize.INTEGER, allowNull: false },
 });
-
-sequelize
-  .sync()
-  .then(() => console.log("Database synced successfully"))
-  .catch((err) => console.error("Error syncing database:", err));
 
 app.post("/register", async (req, res) => {
-  const { fullname, email, password } = req.body;
+  const { fullname, email, password,otp } = req.body;
   if (!fullname || !email || !password) {
     return res.status(400).send("Please provide all required fields.");
   }
@@ -56,11 +64,44 @@ app.post("/register", async (req, res) => {
     if (existingUser) return res.status(400).send("User already exists.");
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create({ fullname, email, password: hashedPassword });
+    const newUser = await User.create({
+      fullname,
+      email,
+      password: hashedPassword,
+      otp,
+    });
 
-    res.status(201).send({ message: "User registered successfully.", user: newUser });
+    await transporter.sendMail({
+      from: "developerq48@gmail.com",
+      to: email,
+      subject: "Your OTP for Registration",
+      text: `Hello ${fullname},\n\nYour OTP for registration is: ${otp}\n\nThank you!`,
+    });
+
+    res.status(201).send({ message: "User registered successfully. OTP sent to email." });
   } catch (err) {
     console.error(err);
+    res.status(500).send("Internal server error.");
+  }
+});
+
+app.post("/verify-email", async (req, res) => {
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return res.status(400).send("Please provide both email and OTP.");
+  }
+
+  try {
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).send("User not found.");
+
+    if (user.otp !== otp) return res.status(400).send("Invalid OTP.");
+
+    await user.update({ otp: null });
+    res.status(200).send("OTP Verified Successfully!");
+  } catch (error) {
+    console.error(error);
     res.status(500).send("Internal server error.");
   }
 });
@@ -87,9 +128,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-
-
-
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
-})
+});

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import EmojiPicker from "emoji-picker-react";
 
-const socket = io("http://localhost:4000");
+// const socket = io("http://localhost:4000");
 
 const Chat = ({ username, room }) => {
   const [messages, setMessages] = useState([]);
@@ -11,23 +11,23 @@ const Chat = ({ username, room }) => {
   const [isTyping, setIsTyping] = useState(false);
   const messageContainerRef = useRef(null);
 
-  useEffect(() => {
-    socket.emit("joinRoom", { roomID: room, name: username });
+  // useEffect(() => {
+  //   socket.emit("joinRoom", { roomID: room, name: username });
 
-    socket.on("receive_message", (message) => {
-      setMessages((prev) => [...prev, message]);
-    });
+  //   socket.on("receive_message", (message) => {
+  //     setMessages((prev) => [...prev, message]);
+  //   });
 
-    socket.on("user_typing", (data) => {
-      if (data.username !== username) {
-        setIsTyping(data.typing);
-      }
-    });
+  //   socket.on("user_typing", (data) => {
+  //     if (data.username !== username) {
+  //       setIsTyping(data.typing);
+  //     }
+  //   });
 
-    return () => {
-      socket.disconnect();
-    };
-  }, [room, username]);
+  //   return () => {
+  //     socket.disconnect();
+  //   };
+  // }, [room, username]);
 
   const handleSendMessage = () => {
     if (currentMessage.trim() === "") return;
