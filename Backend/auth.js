@@ -4,8 +4,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const formData = require("form-data");
-const Mailgun = require("mailgun.js");
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
 const app = express();
@@ -41,21 +40,25 @@ const User = sequelize.define("user", {
   }
 })();
 
-const mailgun = new Mailgun(formData);
-const mailgunClient = mailgun.client({
-  username: "api",
-  key: process.env.MAILGUN_API_KEY, 
+const transporter = nodemailer.createTransport({
+  host:"smtp-mail.outlook.com",
+  auth: {
+    user: process.env.SENDER_EMAIL,
+    pass: process.env.SENDER_EMAIL_PASSWORD,
+  },
 });
 
 app.post("/register", async (req, res) => {
-  const { fullname, email, password,otp } = req.body;
-  if (!fullname || !email || !password || !otp) {
+  const { fullname, email, password } = req.body;
+  if (!fullname || !email || !password) {
     return res.status(400).send("Please provide all required fields.");
   }
 
   try {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) return res.status(400).send("User already exists.");
+    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -63,15 +66,17 @@ app.post("/register", async (req, res) => {
       fullname,
       email,
       password: hashedPassword,
-      otp,
+      otp:randomOtp,
     });
 
-    await mailgunClient.messages.create(process.env.MAILGUN_DOMAIN, {
-      from: "developerq48@gmail.com",
+    const mailOptions = {
+      from: process.env.SENDER_EMAIL,
       to: email,
       subject: "Your OTP for Registration",
-      text: `Hello ${fullname},\n\nYour OTP for registration is: ${otp}\n\nThank you!`,
-    });
+      text: `Hello ${fullname},\n\nYour OTP for registration is: ${randomOtp}\n\nThank you!`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     res.status(201).send({ message: "User registered successfully. OTP sent to email." });
   } catch (err) {

@@ -12,16 +12,11 @@ function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isOTP, setisOTP] = useState(false);
-  const [otp, setOTP] = useState("");
   const [enteredOtp, setenteredOtp] = useState("");
 
   const navigate = useNavigate();
 
-  const generateOTP = () => {
-    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-    setOTP(randomOtp);
-    return randomOtp;
-  };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,19 +24,16 @@ function Register() {
     setError("");
 
     try {
-      const generatedOtp = generateOTP();
-
+      
       const response = await axios.post("http://localhost:3000/register", {
         fullname,
         email,
         password,
-        otp: generatedOtp,
       });
 
       if (response.status === 201) {
         setSuccess(true);
         setisOTP(true);
-        // navigate('/login')
       } else {
         setError("Registration failed. Please try again.");
       }
