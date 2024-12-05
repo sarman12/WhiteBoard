@@ -4,7 +4,8 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const nodemailer = require("nodemailer");
+const formData = require("form-data");
+const Mailgun = require("mailgun.js");
 require("dotenv").config();
 
 const app = express();
@@ -13,15 +14,10 @@ const port = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-
-
-// Instead of using the nodemailer we should use sendgrid email seervic
-
-
 const sequelize = new Sequelize({
   dialect: "sqlite",
   storage: "./Database.sqlite",
-  logging: console.log, 
+  logging: console.log,
 });
 
 const User = sequelize.define("user", {
@@ -45,17 +41,15 @@ const User = sequelize.define("user", {
   }
 })();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.SENDER_EMAIL,
-    pass: process.env.SENDER_EMAIL_PASSWORD,
-  },
+const mailgun = new Mailgun(formData);
+const mailgunClient = mailgun.client({
+  username: "api",
+  key: process.env.MAILGUN_API_KEY, 
 });
 
 app.post("/register", async (req, res) => {
   const { fullname, email, password,otp } = req.body;
-  if (!fullname || !email || !password) {
+  if (!fullname || !email || !password || !otp) {
     return res.status(400).send("Please provide all required fields.");
   }
 
@@ -64,6 +58,7 @@ app.post("/register", async (req, res) => {
     if (existingUser) return res.status(400).send("User already exists.");
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const newUser = await User.create({
       fullname,
       email,
@@ -71,7 +66,7 @@ app.post("/register", async (req, res) => {
       otp,
     });
 
-    await transporter.sendMail({
+    await mailgunClient.messages.create(process.env.MAILGUN_DOMAIN, {
       from: "developerq48@gmail.com",
       to: email,
       subject: "Your OTP for Registration",
