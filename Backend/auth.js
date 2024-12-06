@@ -3,8 +3,8 @@ const Sequelize = require("sequelize");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const app = express();
@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 
 const sequelize = new Sequelize({
   dialect: "sqlite",
-  storage: "./Database.sqlite",
+  storage: "./.sqlite",
   logging: console.log,
 });
 
@@ -33,7 +33,7 @@ const User = sequelize.define("user", {
 
 (async () => {
   try {
-    await sequelize.sync({ force: true });
+    await sequelize.sync();
     console.log("Database synced successfully.");
   } catch (err) {
     console.error("Error syncing database:", err);
@@ -41,7 +41,9 @@ const User = sequelize.define("user", {
 })();
 
 const transporter = nodemailer.createTransport({
-  host:"smtp-mail.outlook.com",
+  service: "gmail",
+  secure:true,
+  port:465,
   auth: {
     user: process.env.SENDER_EMAIL,
     pass: process.env.SENDER_EMAIL_PASSWORD,
@@ -50,6 +52,7 @@ const transporter = nodemailer.createTransport({
 
 app.post("/register", async (req, res) => {
   const { fullname, email, password } = req.body;
+
   if (!fullname || !email || !password) {
     return res.status(400).send("Please provide all required fields.");
   }
@@ -57,17 +60,21 @@ app.post("/register", async (req, res) => {
   try {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) return res.status(400).send("User already exists.");
-    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
 
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
 
     const newUser = await User.create({
       fullname,
       email,
       password: hashedPassword,
-      otp:randomOtp,
+      otp: randomOtp,
     });
+
+    if (!newUser) {
+      return res.status(500).send("Failed to create user.");
+    }
 
     const mailOptions = {
       from: process.env.SENDER_EMAIL,
@@ -78,12 +85,13 @@ app.post("/register", async (req, res) => {
 
     await transporter.sendMail(mailOptions);
 
-    res.status(201).send({ message: "User registered successfully. OTP sent to email." });
+    res.status(201).send("User registered successfully. OTP sent to email.");
   } catch (err) {
-    console.error(err);
+    console.error("Error in registration:", err);
     res.status(500).send("Internal server error.");
   }
 });
+
 
 app.post("/verify-email", async (req, res) => {
   const { email, otp } = req.body;
@@ -105,6 +113,7 @@ app.post("/verify-email", async (req, res) => {
     res.status(500).send("Internal server error.");
   }
 });
+
 
 app.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -128,6 +137,8 @@ app.post("/login", async (req, res) => {
   }
 });
 
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
+

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import "../../index.css";
 import { useNavigate } from "react-router";
 import axios from "axios";
-import {FaGoogle,FaFacebook} from 'react-icons/fa'
+import { FaGoogle, FaFacebook } from "react-icons/fa";
 
 function Register() {
   const [loading, setLoading] = useState(false);
@@ -13,10 +13,9 @@ function Register() {
   const [success, setSuccess] = useState(false);
   const [isOTP, setisOTP] = useState(false);
   const [enteredOtp, setenteredOtp] = useState("");
+  const [otpSuccess, setOtpSuccess] = useState(false);
 
   const navigate = useNavigate();
-
-  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,7 +23,6 @@ function Register() {
     setError("");
 
     try {
-      
       const response = await axios.post("http://localhost:3000/register", {
         fullname,
         email,
@@ -47,6 +45,8 @@ function Register() {
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
       const response = await axios.post("http://localhost:3000/verify-email", {
@@ -55,14 +55,16 @@ function Register() {
       });
 
       if (response.status === 200) {
-        alert("OTP Verified Successfully!");
-        navigate("/login");
+        setOtpSuccess(true);
+        setTimeout(() => navigate("/login"), 2000); // Navigate to login after 2 seconds
       } else {
         setError("Invalid OTP. Please try again.");
       }
     } catch (error) {
       setError("An error occurred. Please try again later.");
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -78,6 +80,11 @@ function Register() {
           </p>
 
           {error && <p className="text-sm text-red-600 text-center mb-4">{error}</p>}
+          {otpSuccess && (
+            <p className="text-sm text-green-600 text-center mb-4">
+              OTP Verified Successfully! Redirecting to login...
+            </p>
+          )}
 
           <form onSubmit={handleVerifyOTP}>
             <input
@@ -93,7 +100,7 @@ function Register() {
               type="submit"
               className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-semibold transition duration-300"
             >
-              Verify OTP
+              {loading ? "Verifying..." : "Verify OTP"}
             </button>
           </form>
         </div>

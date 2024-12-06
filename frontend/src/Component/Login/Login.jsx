@@ -37,7 +37,7 @@ function Login() {
         localStorage.setItem('isLoggedIn', true);
 
         console.log('User details:', user);
-setTimeout(() => navigate('/dashboard', { state: { user } }), 2000);
+        setTimeout(() => navigate('/dashboard', { state: { user } }), 2000);
       }
     } catch (err) {
       console.error(err);
