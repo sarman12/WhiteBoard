@@ -1,5 +1,4 @@
 import React from 'react';
-import '../../index.css';
 import {useNavigate} from 'react-router-dom'
 function Hero() {
   const navigate=useNavigate();
@@ -21,7 +20,7 @@ function Hero() {
         </p>
 
         <div className="flex justify-center gap-6 md:gap-8 mb-6">
-          <button className="bg-gradient-to-r from-blue-400 to-blue-600 text-white py-3 px-10 rounded-xl font-semibold text-lg hover:opacity-90 transition duration-300" onClick={()=>navigate('/login')}>
+          <button className="bg-gradient-to-r from-blue-400 to-blue-600 text-white py-3 px-10 rounded-xl font-semibold text-lg hover:opacity-90 transition duration-300" onClick={()=>setTimeout(() => { navigate('/login')}, 2000)}>
             Get Started
           </button>
           <button className="bg-transparent border-2 border-white text-white py-3 px-10 rounded-xl font-semibold text-lg hover:bg-white hover:text-black transition duration-300">

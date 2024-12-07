@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import '../../index.css';
 
 function Navbar() {
   const [Toggle, setToggle] = useState(false);

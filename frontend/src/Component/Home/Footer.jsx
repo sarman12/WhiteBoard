@@ -1,7 +1,6 @@
 import React from 'react';
 import { FaFacebook, FaTwitter, FaInstagram, FaLinkedin } from 'react-icons/fa';
 import Logo from '../../assets/logo.webp';
-import '../../index.css';
 
 function Footer() {
   return (
@@ -24,18 +23,9 @@ function Footer() {
           </div>
         </div>
 
-        <div className="w-full  py-10 text-center mb-10 border-y-[1px] border-gray-600">
+        
 
-          <h3 className="text-4xl font-extrabold text-[#f7e7ce] mb-6">Email Us</h3>
-          <div
-            onClick={() => window.location.href = 'mailto:sahaneearman601@gmail.com'}
-            className="text-4xl font-mono tracking-wide rounded-full text-gray-800 hover:text-teal-900  transition cursor-pointer bg-white py-4 px-6  inline-block"
-          >
-            sahaneearman601@gmail.com
-          </div>
-        </div>
-
-        <div className="container mx-auto flex flex-wrap justify-between items-start px-6">
+        <div className="container mx-auto flex  justify-between items-start px-6">
           <div className="w-full md:w-1/3 text-center md:text-left mb-8 hidden md:block">
             <img
               src={Logo}
@@ -44,21 +34,35 @@ function Footer() {
             />
           </div>
 
-          <div className="w-full md:w-1/3 mb-8">
-            <ul className="text-sm space-y-2">
-              <li><a href="#home" className="text-gray-300 text-lg hover:text-teal-400 transition">Home</a></li>
-              <li><a href="#features" className="text-gray-300 text-lg hover:text-teal-400 transition">Features</a></li>
-              <li><a href="#pricing" className="text-gray-300 text-lg hover:text-teal-400 transition">Pricing</a></li>
-              <li><a href="#contact" className="text-gray-300 text-lg hover:text-teal-400 transition">Contact</a></li>
-            </ul>
+          <div className="flex items-center space-x-10">
+            <div className="w-full md:w-1/3 mb-8">
+              <ul className="text-sm space-y-2">
+                <li><a href="#home" className="text-gray-300 text-lg hover:text-teal-400 transition">Home</a></li>
+                <li><a href="#features" className="text-gray-300 text-lg hover:text-teal-400 transition">Features</a></li>
+                <li><a href="#pricing" className="text-gray-300 text-lg hover:text-teal-400 transition">Pricing</a></li>
+                <li><a href="#contact" className="text-gray-300 text-lg hover:text-teal-400 transition">Contact</a></li>
+              </ul>
+            </div>
+
+            <div className="w-full md:w-1/3 mb-8">
+              <ul className="text-sm space-y-2">
+                <li><a href="#privacy-policy" className="text-gray-400 text-lg hover:text-teal-400 transition">Privacy Policy</a></li>
+                <li><a href="#terms" className="text-gray-400 text-lg hover:text-teal-400 transition">Terms & Conditions</a></li>
+              </ul>
+            </div>
+
+            <div className="  py-10 text-center mb-10">
+
+              <h3 className="text-2xl font-extrabold text-[#f7e7ce] mb-6">Queries!!</h3>
+              <div
+                onClick={() => window.location.href = 'mailto:sahaneearman601@gmail.com'}
+                className="text-xl font-mono tracking-wide rounded-full text-gray-800 hover:text-teal-900  transition cursor-pointer bg-white py-4 px-6  inline-block"
+              >
+                sahaneearman601@gmail.com
+              </div>
+            </div>
           </div>
 
-          <div className="w-full md:w-1/3 mb-8">
-            <ul className="text-sm space-y-2">
-              <li><a href="#privacy-policy" className="text-gray-400 text-lg hover:text-teal-400 transition">Privacy Policy</a></li>
-              <li><a href="#terms" className="text-gray-400 text-lg hover:text-teal-400 transition">Terms & Conditions</a></li>
-            </ul>
-          </div>
         </div>
 
         <div className="flex justify-center space-x-6 mt-8">

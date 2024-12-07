@@ -1,5 +1,4 @@
 import React from 'react';
-import '../../index.css';
 
 function Feature() {
   return (
@@ -39,12 +38,10 @@ function Feature() {
                 </svg>
               </div>
 
-              {/* Title */}
               <h3 className="text-xl font-bold text-white mb-3">
                 {feature.title}
               </h3>
 
-              {/* Description */}
               <p className="text-gray-300 text-sm leading-relaxed">
                 {feature.description}
               </p>

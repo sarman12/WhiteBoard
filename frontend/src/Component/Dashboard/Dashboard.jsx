@@ -107,12 +107,18 @@ function Dashboard() {
 ];
 
 
-  useEffect(() => {
-    const slideInterval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 3000);
-    return () => clearInterval(slideInterval);
-  }, [slides.length]);
+
+  const handleNextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentSlide((prev) =>
+      prev === 0 ? slides.length - 1 : (prev - 1) % slides.length
+    );
+  };
+
+
 
 
   const handleLogout = () => {
@@ -238,18 +244,39 @@ function Dashboard() {
       </button>
     </form>
   </div>
-</section>
+        </section>
+
+         <section className="max-w-md relative sm:hidden md:block">
+          <div className="relative flex items-center justify-center">
+            <button
+                onClick={handlePrevSlide}
+                className="absolute left-0 transform -translate-x-full sm:-translate-x-20 bg-blue-500 text-white p-2 rounded-full shadow hover:bg-blue-600"
+              >
+                <FaArrowLeft className="text-lg" />
+            </button>
+
+            <div className="text-center">
+                <img
+                  src={slides[currentSlide].image}
+                  alt="Slide"
+                  className="w-40 sm:w-80 mx-auto rounded-full object-cover border-2 border-gray-300"
+                />
+                <h2 className="text-lg text-white text-center sm:text-xl font-semibold mt-3">
+                  {slides[currentSlide].title}
+                </h2>
+                <p className="text-center text-white text-sm sm:text-base">
+                  {slides[currentSlide].description}
+                </p>
+            </div>
+            <button
+                onClick={handleNextSlide}
+                className="absolute right-0 transform translate-x-full sm:translate-x-20 bg-blue-500 text-white p-2 rounded-full shadow hover:bg-blue-600"
+              >
+                <FaArrowRight className="text-lg" />
+              </button>
 
 
-        <section className="max-w-md relative sm:hidden md:block">
-          <img
-            src={slides[currentSlide].image}
-            alt="Slide"
-            className="w-40 sm:w-80 mx-auto rounded-full object-cover border-2 border-gray-300"
-          />
-          <h2 className="text-lg text-white text-center sm:text-xl font-semibold mt-3">{slides[currentSlide].title}</h2>
-          <p className="  text-center text-white text-sm sm:text-base">{slides[currentSlide].description}</p>
-          
+          </div>
         </section>
       </main>
     </div>

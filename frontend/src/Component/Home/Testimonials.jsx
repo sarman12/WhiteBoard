@@ -4,12 +4,9 @@ function Testimonials() {
   return (
     <div id="testimonials" className="mt-10 text-center px-6 pb-10 border-b-[1px] border-gray-600">
       
-      
       <h2 className="text-2xl md:text-4xl   mb-6 font-extrabold text-[#f7e7ce] ">
         What Our Users Say
       </h2>
-
-      
       <div className="flex flex-wrap justify-center gap-8">
         <blockquote className="text-white max-w-xs text-left italic border-l-4 border-teal-400 pl-4">
           "CollabPad has transformed the way my team works together! The tools are intuitive and powerful."

@@ -17,6 +17,7 @@ function Register() {
 
   const navigate = useNavigate();
 
+  // Registering Logic
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -43,6 +44,7 @@ function Register() {
     }
   };
 
+  // OTP verification Logic
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setError("");
@@ -56,7 +58,7 @@ function Register() {
 
       if (response.status === 200) {
         setOtpSuccess(true);
-        setTimeout(() => navigate("/login"), 2000); // Navigate to login after 2 seconds
+        setTimeout(() => navigate("/login"), 2000);
       } else {
         setError("Invalid OTP. Please try again.");
       }
@@ -68,6 +70,7 @@ function Register() {
     }
   };
 
+  // Verify page JSX
   if (isOTP) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-800 to-pink-900 flex items-center justify-center fixed left-0 right-0">
@@ -108,6 +111,7 @@ function Register() {
     );
   }
 
+  // Register Page JSX
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-800 to-pink-900 flex items-center justify-center fixed left-0 right-0">
       <div

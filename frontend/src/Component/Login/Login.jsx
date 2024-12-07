@@ -110,7 +110,7 @@ function Login() {
           <button
             type="submit"
             className="w-full py-3 bg-gradient-to-r from-teal-400 to-teal-600 text-white rounded-lg font-semibold hover:opacity-90 transition duration-300"
-            // onClick={() => navigate("/dashboard")}
+       
           >
             Login
           </button>

@@ -14,7 +14,9 @@ import {
   FaTh,
   FaEllipsisV,
   FaTimes,
-  FaSnapchat
+  FaSnapchat,
+  FaSquare,
+  FaCircle
 } from 'react-icons/fa';
 import { BsChatDots } from 'react-icons/bs';
 import ChatInterface from './ChatInterface';
@@ -42,6 +44,9 @@ function Whiteboard() {
   const [textTool, setTextTool] = useState(false);
   const [seeMore,setSeeMore] = useState(false);
   const [chat,setChat] = useState(false);
+  const [tool, setTool] = useState("brush");
+  const [shapes, setShapes] = useState([]);
+  const [selectedElement, setSelectedElement] = useState(null);
 
   useEffect(() => {
     if (roomID && name) {
@@ -113,6 +118,11 @@ function Whiteboard() {
       socket.off('importImage');
     };
   }, []);
+
+  
+  
+  
+
 
   const saveCanvasState = () => {
     const canvas = canvasRef.current;
@@ -212,6 +222,8 @@ function Whiteboard() {
     }
   };
 
+  
+
   const clearCanvas = () => {
     if (name !== hostName) {
       alert('Only the host can clear the canvas.');
@@ -254,18 +266,65 @@ function Whiteboard() {
     }
   }, [showGrid]);
 
-  const handleAddStickyNote = () => {
-    if (noteText.trim()) {
-      const newNote = {
-        id: Date.now(),
-        text: noteText,
-        x: Math.random() * 200 + 50,
-        y: Math.random() * 200 + 50,
-      };
-      setStickyNotes((prev) => [...prev, newNote]);
-      setNoteText('');
-    }
-  };
+  const addStickyNote = () => {
+        const note = { id: Date.now(), text: 'New Note', x: 100, y: 100 };
+        setStickyNotes([...stickyNotes, note]);
+        socket.emit('add-note', note);
+    };
+
+    const addShape = (type) => {
+        const shape = { id: Date.now(), type, x: 150, y: 150, width: 100, height: 100 };
+        setShapes([...shapes, shape]);
+        socket.emit('add-shape', shape);
+    };
+
+    const renderShapesAndNotes = () => {
+        const context = contextRef.current;
+        stickyNotes.forEach(note => {
+            context.fillStyle = 'yellow';
+            context.fillRect(note.x, note.y, 150, 100);
+            context.fillStyle = 'black';
+            context.fillText(note.text, note.x + 10, note.y + 50);
+        });
+
+        shapes.forEach(shape => {
+            context.strokeStyle = 'blue';
+            if (shape.type === 'rectangle') {
+                context.strokeRect(shape.x, shape.y, shape.width, shape.height);
+            } else if (shape.type === 'circle') {
+                context.beginPath();
+                context.arc(
+                    shape.x + shape.width / 2,
+                    shape.y + shape.height / 2,
+                    shape.width / 2,
+                    0,
+                    Math.PI * 2
+                );
+                context.stroke();
+            }
+        });
+    };
+        useEffect(() => {
+        if (socket) {
+            socket.on('canvas-data', data => {
+                const image = new Image();
+                image.src = data;
+                image.onload = () => {
+                    contextRef.current.drawImage(image, 0, 0);
+                };
+            });
+
+            socket.on('add-note', note => {
+                setStickyNotes(prevNotes => [...prevNotes, note]);
+            });
+
+            socket.on('add-shape', shape => {
+                setShapes(prevShapes => [...prevShapes, shape]);
+            });
+        }
+    }, [socket]);
+
+  
   
 
 
@@ -376,9 +435,8 @@ function Whiteboard() {
               <button onClick={() => setTextTool(!textTool)}>
                 <FaTextHeight />
               </button>
-              <button onClick={handleAddStickyNote}>
-                <FaStickyNote />
-              </button>
+              
+
 
 
               <button onClick={() => setIsErasing(false)} className={`p-3 rounded-full ${ !isErasing
@@ -401,18 +459,7 @@ function Whiteboard() {
               >
                 <FaDownload className="text-lg" />
             </label>
-            {stickyNotes.map((note) => (
-              <div
-                key={note.id}
-                className="sticky-note"
-                style={{ top: note.y, left: note.x }}
-              >
-                {note.text}
-              </div>
-            ))}
-
-
-
+            
               <button
                 onClick={() => setIsErasing(true)}
                 className={`p-3 rounded-full ${
@@ -428,6 +475,9 @@ function Whiteboard() {
               <button onClick={toggleGrid}><FaTh /></button>
               <button onClick={undo}><FaUndo /></button>
               <button onClick={redo}><FaRedo /></button>
+              <button onClick={addStickyNote}>Sticky Note</button>
+                <button onClick={() => addShape('rectangle')}>Rectangle</button>
+                <button onClick={() => addShape('circle')}>Circle</button>
 
 
               <div className="flex flex-col items-center space-y-1">
@@ -469,6 +519,7 @@ function Whiteboard() {
               onMouseDown={startDrawing}
               onMouseUp={stopDrawing}
               onMouseMove={draw}
+
             />
           </main>
         </div>
