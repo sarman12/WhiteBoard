@@ -5,18 +5,11 @@ import {
   FaTrash,
   FaBrush,
   FaPen,
-  FaStickyNote,
-  FaTextHeight,
   FaEraser,
   FaDownload,
   FaUndo,
   FaRedo,
-  FaTh,
   FaEllipsisV,
-  FaTimes,
-  FaSnapchat,
-  FaSquare,
-  FaCircle
 } from 'react-icons/fa';
 import { BsChatDots } from 'react-icons/bs';
 import ChatInterface from './ChatInterface';
@@ -38,15 +31,9 @@ function Whiteboard() {
   const [hostName, setHostName] = useState(null);
   const [undoStack, setUndoStack] = useState([]);
   const [redoStack, setRedoStack] = useState([]);
-  const [showGrid, setShowGrid] = useState(false);
-  const [stickyNotes, setStickyNotes] = useState([]);
-  const [noteText, setNoteText] = useState('');
-  const [textTool, setTextTool] = useState(false);
+  
   const [seeMore,setSeeMore] = useState(false);
   const [chat,setChat] = useState(false);
-  const [tool, setTool] = useState("brush");
-  const [shapes, setShapes] = useState([]);
-  const [selectedElement, setSelectedElement] = useState(null);
 
   useEffect(() => {
     if (roomID && name) {
@@ -66,7 +53,7 @@ function Whiteboard() {
   useEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d');
-    canvas.width = window.innerWidth * 0.75;
+    canvas.width = window.innerWidth * 0.90;
     canvas.height = window.innerHeight * 0.77;
     canvas.style.backgroundColor = '#f0f0f0';
     context.lineCap = 'round';
@@ -159,47 +146,70 @@ function Whiteboard() {
 
   const startDrawing = ({ nativeEvent }) => {
     if (name !== hostName) return;
-    const { offsetX, offsetY } = nativeEvent;
-    contextRef.current.beginPath();
-    contextRef.current.moveTo(offsetX, offsetY);
+      const { x, y } = getCanvasOffset(nativeEvent);
+    contextRef.current.moveTo(x, y);
     setIsDrawing(true);
     saveCanvasState();
-    socket.emit('startDrawing', { roomID, data: { x: offsetX, y: offsetY } });
+      socket.emit('startDrawing', { roomID, data: { x, y } });
+
   };
 
   const stopDrawing = () => {
-    if (!isDrawing) return;
-    contextRef.current.closePath();
-    setIsDrawing(false);
-    socket.emit('stopDrawing', roomID);
-  };
+  if (!isDrawing) return;
 
-  const draw = ({ nativeEvent }) => {
-    if (!isDrawing) return;
-    const { offsetX, offsetY } = nativeEvent;
-    const context = contextRef.current;
-    context.globalCompositeOperation = isErasing
-      ? 'destination-out'
-      : 'source-over';
-    context.globalAlpha = isHighlighting ? 0.3 : 1;
-    context.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : brushColor;
-    context.lineWidth = brushSize;
-    context.lineTo(offsetX, offsetY);
-    context.stroke();
-    context.beginPath();
-    context.moveTo(offsetX, offsetY);
-    socket.emit('drawing', {
-      roomID,
-      data: {
-        x: offsetX,
-        y: offsetY,
-        color: brushColor,
-        size: brushSize,
-        tool: isErasing ? 'eraser' : isHighlighting ? 'highlighter' : 'brush',
-      },
-    });
-    context.globalAlpha = 1;
+  contextRef.current.closePath();
+  setIsDrawing(false);
+
+  saveCanvasState();
+
+  socket.emit('stopDrawing', roomID);
+};
+
+const getCanvasOffset = (event) => {
+  const canvas = canvasRef.current;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY,
   };
+};
+
+const draw = ({ nativeEvent }) => {
+  if (!isDrawing) return;
+
+  const { x, y } = getCanvasOffset(nativeEvent);
+
+  const context = contextRef.current;
+  context.globalCompositeOperation = isErasing
+    ? 'destination-out'
+    : 'source-over';
+  context.globalAlpha = isHighlighting ? 0.3 : 1;
+  context.strokeStyle = isErasing ? 'rgba(0,0,0,1)' : brushColor;
+  context.lineWidth = brushSize;
+
+  context.lineTo(x, y);
+  context.stroke();
+  context.beginPath();
+  context.moveTo(x, y);
+
+  socket.emit('drawing', {
+    roomID,
+    data: {
+      x,
+      y,
+      color: brushColor,
+      size: brushSize,
+      tool: isErasing ? 'eraser' : isHighlighting ? 'highlighter' : 'brush',
+    },
+  });
+
+  context.globalAlpha = 1;
+};
+
+
 
   const importImage = (event) => {
     const file = event.target.files[0];
@@ -246,64 +256,29 @@ function Whiteboard() {
     link.click();
   };
 
-  const toggleGrid = () => {
-    setShowGrid((prev) => !prev);
-  };
-
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    if (showGrid) {
-      for (let x = 0; x < canvas.width; x += 50) {
-        for (let y = 0; y < canvas.height; y += 50) {
-          context.beginPath();
-          context.strokeStyle = '#e0e0e0';
-          context.rect(x, y, 50, 50);
-          context.stroke();
-        }
-      }
+  const canvas = canvasRef.current;
+  const context = canvas.getContext('2d');
+
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+  context.strokeStyle = brushColor;
+  context.lineWidth = 2;
+
+  contextRef.current = context;
+
+  for (let x = 0; x < canvas.width; x += 30) {
+    for (let y = 0; y < canvas.height; y += 30) {
+      context.beginPath();
+      context.strokeStyle = '#e0e0e0';
+      context.rect(x, y, 30, 30);
+      context.stroke();
     }
-  }, [showGrid]);
+  }
+}, []);
 
-  const addStickyNote = () => {
-        const note = { id: Date.now(), text: 'New Note', x: 100, y: 100 };
-        setStickyNotes([...stickyNotes, note]);
-        socket.emit('add-note', note);
-    };
 
-    const addShape = (type) => {
-        const shape = { id: Date.now(), type, x: 150, y: 150, width: 100, height: 100 };
-        setShapes([...shapes, shape]);
-        socket.emit('add-shape', shape);
-    };
-
-    const renderShapesAndNotes = () => {
-        const context = contextRef.current;
-        stickyNotes.forEach(note => {
-            context.fillStyle = 'yellow';
-            context.fillRect(note.x, note.y, 150, 100);
-            context.fillStyle = 'black';
-            context.fillText(note.text, note.x + 10, note.y + 50);
-        });
-
-        shapes.forEach(shape => {
-            context.strokeStyle = 'blue';
-            if (shape.type === 'rectangle') {
-                context.strokeRect(shape.x, shape.y, shape.width, shape.height);
-            } else if (shape.type === 'circle') {
-                context.beginPath();
-                context.arc(
-                    shape.x + shape.width / 2,
-                    shape.y + shape.height / 2,
-                    shape.width / 2,
-                    0,
-                    Math.PI * 2
-                );
-                context.stroke();
-            }
-        });
-    };
+  
         useEffect(() => {
         if (socket) {
             socket.on('canvas-data', data => {
@@ -324,6 +299,14 @@ function Whiteboard() {
         }
     }, [socket]);
 
+
+
+
+
+
+    
+    
+
   
   
 
@@ -332,22 +315,31 @@ function Whiteboard() {
     <div className="fixed top-0 bottom-0 w-full bg-white flex flex-col items-center">
       <nav className="p-2 px-5 bg-slate-200 w-full flex justify-between items-center">
         <h1 className="text-xl font-bold">CollabPad</h1>
-        <span className="bg-blue-500 text- px-3 py-1 rounded flex font-extrabold text-[17px] items-center gap-4">
-          Session Code -{`>`} <p className="text-white font-bold tracking-wide">{roomID}</p>
+        <span className="bg-blue-500 px-3 py-1 rounded flex font-extrabold text-[17px] items-center gap-4">
+          
+          <p className="text-white font-bold tracking-wide">{roomID}</p>
           <button
-              title="see more"
-              className="bg-black p-2 mx-4 text-white rounded-full"
-              onClick={() => {
-                setSeeMore(!seeMore);
-              }}
-            >
-              <FaEllipsisV />
-            </button>
+            title="Copy Code"
+            className="bg-green-500 font-semibold px-2 text-white rounded-full hover:bg-green-600 transition"
+            onClick={() => {
+              navigator.clipboard.writeText(roomID);
+            }}
+          >
+            Copy
+          </button>
+          <button
+            title="See More"
+            className="bg-black p-2 mx-4 text-white rounded-full"
+            onClick={() => {
+              setSeeMore(!seeMore);
+            }}
+          >
+            <FaEllipsisV />
+          </button>
         </span>
-        <div>
-
-        </div>
+        <div></div>
       </nav>
+
 
       <div className="flex h-[95vh] flex-row-reverse p-3">
         <div className="bg-white">
@@ -380,31 +372,36 @@ function Whiteboard() {
           {!chat && (
             <button
               onClick={() => setChat(true)}
-              className="fixed bottom-4 right-4 p-4 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 transition"
+              className="fixed z-50 bottom-4 right-4 p-4 rounded-full bg-blue-500 text-white shadow-lg hover:bg-blue-600 transition"
             >
               <BsChatDots className="text-2xl" />
             </button>
           )}
 
-          {chat && (
-          <div className="h-full flex flex-col">
-              <div className="p-2 border-b bg-blue-500 text-white font-bold flex justify-between items-center">
-                <h2>Chat</h2>
-                <button
-                  onClick={() => setChat(false)}
-                  className="p-2 rounded-full bg-red-500 hover:bg-red-600 transition"
-                >
-                  Close
-                </button>
-              </div>
-                <ChatInterface />
+          <div
+            className={`w-[60vh] fixed bottom-0 right-0 h-full bg-white shadow-lg transform overflow-hidden ${
+              chat ? "translate-x-0" : "translate-x-full"
+            } transition-transform duration-300 ease-in-out flex flex-col w-80 z-50`}
+          >
+            <div className="p-2 border-b bg-blue-500 text-white font-bold flex justify-between items-center">
+              <h2>Chat</h2>
+              <button
+                onClick={() => setChat(false)}
+                className="p-2 rounded-full bg-red-500 hover:bg-red-600 transition"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto overflow-hidden ">
+              <ChatInterface />
+            </div>
           </div>
-          )}
+
 
         </div>
 
-        <div className="flex flex-col-reverse border-2 bg-blue-500  shadow-2xl  py-5 px-2">
-          <div className="shadow-xl border-2 mx-auto mb-[-10px] bg-gray-100 p-2 flex space-x-4 items-center rounded-lg">
+        <div className="relative flex flex-col-reverse w-[99vw]   shadow-2xl rounded-[30px]  ">
+          <div className="absolute top-4 left-1/3 shadow-xl border-2 mx-auto mb-[-10px] bg-gray-100 p-2 flex space-x-4 items-center rounded-lg">
               <button
                 onClick={clearCanvas}
                 disabled={name !== hostName}
@@ -432,9 +429,6 @@ function Whiteboard() {
                 <FaBrush className="text-lg" />
               </button>
 
-              <button onClick={() => setTextTool(!textTool)}>
-                <FaTextHeight />
-              </button>
               
 
 
@@ -472,16 +466,12 @@ function Whiteboard() {
                 <FaEraser className="text-lg" />
               </button>
 
-              <button onClick={toggleGrid}><FaTh /></button>
               <button onClick={undo}><FaUndo /></button>
               <button onClick={redo}><FaRedo /></button>
-              <button onClick={addStickyNote}>Sticky Note</button>
-                <button onClick={() => addShape('rectangle')}>Rectangle</button>
-                <button onClick={() => addShape('circle')}>Circle</button>
-
+         
 
               <div className="flex flex-col items-center space-y-1">
-                <label className="text-sm text-gray-600">Color</label>
+                {/* <label className="text-sm text-gray-600">Color</label> */}
                 <input
                   type="color"
                   value={brushColor}
@@ -491,7 +481,7 @@ function Whiteboard() {
               </div>
 
               <div className="flex flex-col items-center space-y-1">
-                <label className="text-sm text-gray-600">Brush</label>
+                {/* <label className="text-sm text-gray-600">Brush</label> */}
                 <input
                   type="range"
                   min="1"
@@ -511,17 +501,14 @@ function Whiteboard() {
               </button>
             </div>
 
-
-          <main className="p-2">
             <canvas
-              className=""
+              className="w-full h-full rounded-[30px] "
               ref={canvasRef}
               onMouseDown={startDrawing}
               onMouseUp={stopDrawing}
               onMouseMove={draw}
 
             />
-          </main>
         </div>
       </div>
     </div>
